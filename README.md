@@ -1,0 +1,1 @@
+Grid::grid_serialized has a coordinate system defined like images in opencv: (x,y)=(0,0) is the top left corner. x counts to the right, y counts downwards.

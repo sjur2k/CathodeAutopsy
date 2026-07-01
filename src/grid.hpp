@@ -4,10 +4,13 @@ using namespace std;
 
 class Grid{
     public:
-        int width; // meters
-        int height; // meters
-        double get_value(int x, int y);
-        Grid(int w, int h);
+        Grid(int r, int c) : rows(r), cols(c), grid_serialized(r * c) {}
+        float get_value(int i, int j);
+        void fill_random_smooth();
+        void print_grid();
+        void write_grid_to_PPM();
+        void write_grid_to_csv(float res);
     private:
-        vector<double> grid_serialized;
+        int rows, cols;
+        vector<float> grid_serialized;
 };
