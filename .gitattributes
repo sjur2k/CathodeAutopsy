@@ -1,0 +1,4 @@
+lib/** linguist-vendored
+include/glad/glad.h linguist-vendored
+include/KHR/khrplatform.h linguist-vendored
+src/glad/glad.c linguist-vendored
