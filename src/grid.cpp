@@ -62,7 +62,7 @@ void Grid::fill_random_smooth(){
     float scale = 1.0f / 32.0f;
     int octaves = 6;
     float persistence = 0.4f;
-    float z_scale = 0.25f;
+    float z_scale = 10.0f;
     for (int j = 0; j < rows; j++){
         for (int i = 0; i < cols; i++){
             grid_serialized[j * cols + i] = z_scale*fbm(i*scale, j*scale, octaves, persistence);
@@ -84,7 +84,7 @@ void Grid::print_grid() {
 }
 
 void Grid::write_grid_to_PPM() {
-    ofstream out("grid.ppm", ios::binary);
+    ofstream out("data/grid.ppm", ios::binary);
     float minVal = *min_element(grid_serialized.begin(), grid_serialized.end());
     float maxVal = *max_element(grid_serialized.begin(), grid_serialized.end());
     float range = (maxVal - minVal) > 1e-6f ? (maxVal - minVal) : 1.0f;

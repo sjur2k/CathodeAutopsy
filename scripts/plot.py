@@ -4,14 +4,14 @@ import os
 plt.rcParams["mathtext.fontset"] = "cm"
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["font.serif"] = ["CMU Serif", "DejaVu Serif"]
-
-with open("build/grid.csv") as f:
+cwd = os.getcwd()
+with open(f"{cwd}/data/grid.csv") as f:
     meta_line = f.readline().lstrip("#").strip().split(",")
 rows =   int(meta_line[1])
 cols =   int(meta_line[3])
 res  = float(meta_line[5])
 
-df = pd.read_csv(f"{os.getcwd()}/build/grid.csv",delimiter=",",comment="#")
+df = pd.read_csv(f"{cwd}/data/grid.csv",delimiter=",",comment="#")
 x, y, z = df["x"]*res, df["y"]*res, df["z"]
 fig = plt.figure(figsize=(15,8))
 ax = fig.add_subplot(projection="3d")
