@@ -1,7 +1,30 @@
 #pragma once
 
+#include <vector>
+#include <glm/glm.hpp>
+#include "window.hpp"
+#include "camera.hpp"
+#include "shader.hpp"
+#include "renderer.hpp"
+#include "input_manager.hpp"
+#include "grid.hpp"
+
 class Application {
-    public:
-        Application();
-        void run();
+public:
+    Application();
+    void run();
+
+private:
+    Window window_;
+    Camera camera_;
+    Shader shader_;
+    Grid grid_;
+    Renderer renderer_;
+    InputManager input_manager_;
+
+    static std::vector<glm::vec3> build_point_cloud(Grid& grid);
+    float last_frame_time_ = 0.0f;
+
+    void update(float delta_time);
+    void render();
 };

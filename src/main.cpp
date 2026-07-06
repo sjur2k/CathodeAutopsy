@@ -1,4 +1,4 @@
-#include <stdio.h>
+/* #include <stdio.h>
 #include <cmath>
 #include <iostream>
 #include <glad/glad.h>
@@ -8,6 +8,7 @@
 #include "shader.hpp"
 #include "renderer.hpp"
 #include "input_manager.hpp"
+#include "window.hpp" 
 
 int main(){
     bool verbose = false;
@@ -33,32 +34,16 @@ int main(){
     float far_plane = 300.0f;
     Camera camera(initial_camera_pose, field_of_view, aspect_ratio, near_plane, far_plane);
 
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow* window = glfwCreateWindow(1920, 1080, "Cathode Visualization", NULL, NULL);
-    if (!window) {
-        std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
-    
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cerr << "Failed to initialize GLAD" << std::endl;
-        return -1;
-    }
-
+    Window window(1920,1080, "Cathode Visualization");
     Shader shader("shaders/basic.vert", "shaders/basic.frag");
     Renderer renderer(grid_data);
-    InputManager input_manager(window, camera);
+    InputManager input_manager(window.get_handle(), camera);
 
     float last_frame_time = 0.0f;
 
-    while(!glfwWindowShouldClose(window)){
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS){
-            glfwSetWindowShouldClose(window, true);
+    while(!window.should_close()){
+        if (glfwGetKey(window.get_handle(), GLFW_KEY_Q) == GLFW_PRESS){
+            glfwSetWindowShouldClose(window.get_handle(), true);
         }
 
         float current_time = static_cast<float>(glfwGetTime());
@@ -71,9 +56,16 @@ int main(){
         glClear(GL_COLOR_BUFFER_BIT);
         
         renderer.draw(shader, camera.get_projection_matrix(), camera.get_view_matrix(), glm::mat4(1.0f));
-        
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        window.swap_buffers();
+        glfwPollEvents(); 
     }
+    return 0;
+}*/
+
+#include "application.hpp"
+
+int main(){
+    Application app;
+    app.run();
     return 0;
 }

@@ -1,4 +1,5 @@
 #include "input_manager.hpp"
+#include "camera.hpp"
 
 InputManager::InputManager(GLFWwindow* window, Camera& camera) : window_(window), camera_(camera) {
     glfwSetWindowUserPointer(window_, this);

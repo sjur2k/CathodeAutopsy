@@ -19,7 +19,7 @@ class InputManager {
 
         void process_keyboard(float delta_time);
         void orbit(double xpos, double ypos);
-        
+
         static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
         static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 };

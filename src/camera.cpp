@@ -13,6 +13,10 @@ void Camera::set_pose(const Pose& new_pose) {
     pose = new_pose;
 }
 
+void Camera::reset_pose(){
+    pose = initial_pose;
+}
+
 glm::mat4 Camera::get_view_matrix() const {
     glm::mat4 view = glm::mat4(1.0f);
     view = glm::translate(view, glm::vec3(-pose.position.x, -pose.position.y, -pose.position.z));
