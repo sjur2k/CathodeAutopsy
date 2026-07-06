@@ -1,4 +1,0 @@
-[1/2] Building CXX object CMakeFiles/CathodeAutopsy.dir/src/main.cpp.obj
-FAILED: [code=1] CMakeFiles/CathodeAutopsy.dir/src/main.cpp.obj 
-C:\msys64\mingw64\bin\c++.exe   -g -Wall -Wextra -Wpedantic -MD -MT CMakeFiles/CathodeAutopsy.dir/src/main.cpp.obj -MF CMakeFiles\CathodeAutopsy.dir\src\main.cpp.obj.d -o CMakeFiles/CathodeAutopsy.dir/src/main.cpp.obj -c C:/sjur2k/CathodeAutopsy/src/main.cpp
-ninja: build stopped: subcommand failed.

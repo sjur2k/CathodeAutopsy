@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "grid.hpp"
+#include "geometry.hpp"
 using namespace std;
 
 float hash2(int x, int y){
@@ -51,6 +52,12 @@ float fbm(float x, float y, int octaves, float persistence = 0.5f) {
     return sum / norm;  // back to ~[0,1]
 }
 
+Grid::Grid(int r, int c, Pose origin) {
+    rows = r;
+    cols = c;
+    grid_serialized = std::vector<float>(r * c);
+    relative_origin = origin;
+}
 void Grid::fill_random_smooth(){
     float scale = 1.0f / 32.0f;
     int octaves = 6;
@@ -95,10 +102,11 @@ void Grid::write_grid_to_PPM() {
             out.put(r).put(g).put(b);
         }
     }
+    out.close();
 }
 
 void Grid::write_grid_to_csv(float res){
-    ofstream out("grid.csv");
+    ofstream out("data/grid.csv");
     out <<"#"<<"rows"<<","<<rows<<","<<"cols"<<","<<cols<<","<<"resolution"<<","<<res<<"\n";
     out << "x,y,z\n";
     for (int j = 0; j < rows; j++){
@@ -107,4 +115,18 @@ void Grid::write_grid_to_csv(float res){
         }
     }
     out.close();
+}
+
+std::vector<glm::vec3> Grid::get_point_cloud_vec3() {
+    std::vector<glm::vec3> point_cloud;
+    point_cloud.reserve(rows * cols);
+    for (int j = 0; j < rows; j++) {
+        for (int i = 0; i < cols; i++) {
+            float x = i + relative_origin.position.x;
+            float y = j + relative_origin.position.y;
+            float z = get_value(i, j) + relative_origin.position.z;
+            point_cloud.emplace_back(x, y, z);
+        }
+    }
+    return point_cloud;
 }
