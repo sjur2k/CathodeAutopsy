@@ -18,23 +18,41 @@ void InputManager::process_input(float delta_time) {
 void InputManager::process_keyboard(float delta_time) {
     float velocity = movement_speed_multiplier_ * delta_time;
     Pose current_pose = camera_.get_pose();
+    
+    float yaw_rad = glm::radians(current_pose.rotation.yaw);
+    float pitch_rad = glm::radians(current_pose.rotation.pitch);
+    
+    Position unit_forward(
+        cos(pitch_rad) * sin(yaw_rad),
+        +sin(pitch_rad),
+        -cos(pitch_rad) * cos(yaw_rad)
+    );
+
+    Position unit_right(
+        cos(yaw_rad),
+        0.0f,
+        -sin(yaw_rad)
+    );
+
+    Position unit_up(0.0f,0.0f,1.0f);
+    
     if (glfwGetKey(window_, GLFW_KEY_W) == GLFW_PRESS){
-        current_pose.position.z -= velocity; // Move the camera along the z-axis
+        current_pose.position += unit_forward*velocity;
     }
     if (glfwGetKey(window_, GLFW_KEY_S) == GLFW_PRESS){
-        current_pose.position.z += velocity; // Move the camera along the z-axis
+        current_pose.position -= unit_forward*velocity;
     }
     if (glfwGetKey(window_, GLFW_KEY_A) == GLFW_PRESS){
-        current_pose.position.x -= velocity; // Move the camera along the x-axis
+        current_pose.position -= unit_right*velocity;
     }
     if (glfwGetKey(window_, GLFW_KEY_D) == GLFW_PRESS){
-        current_pose.position.x += velocity; // Move the camera along the x-axis
+        current_pose.position += unit_right*velocity;
     }
     if (glfwGetKey(window_, GLFW_KEY_SPACE) == GLFW_PRESS){
-        current_pose.position.y += velocity; // Move the camera along the y-axis
+        current_pose.position += unit_up*velocity;
     }
     if (glfwGetKey(window_, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
-        current_pose.position.y -= velocity; // Move the camera along the y-axis
+        current_pose.position -= unit_up*velocity;
     }
     camera_.set_pose(current_pose);
 }
@@ -44,6 +62,7 @@ void InputManager::orbit(double xpos, double ypos) {
         last_x_ = xpos;
         last_y_ = ypos;
         first_mouse_ = false;
+        return;
     }
 
     float xoffset = static_cast<float>(xpos - last_x_)*mouse_sensitivity_;
@@ -81,6 +100,7 @@ void InputManager::mouse_button_callback(GLFWwindow* window, int button, int act
             input_manager->first_mouse_ = true;
         } else if (action == GLFW_RELEASE){
             input_manager->orbiting_ = false;
+            input_manager->first_mouse_ = false;
         }
     }
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS){

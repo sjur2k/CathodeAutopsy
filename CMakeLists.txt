@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.10)
 
 project (CathodeAutopsy)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #add_compile_options(-Wall -Wextra -Wpedantic)
@@ -20,6 +20,11 @@ add_executable (CathodeAutopsy
     src/application.cpp
     src/glad/glad.c
 )
+
+add_custom_command(TARGET CathodeAutopsy POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/shaders
+        $<TARGET_FILE_DIR:CathodeAutopsy>/shaders)
 
 target_include_directories(CathodeAutopsy PRIVATE 
     ${CMAKE_SOURCE_DIR}/lib/glfw-3.4.bin.WIN64/include

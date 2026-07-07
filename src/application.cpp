@@ -1,3 +1,4 @@
+#include <iostream>
 #include "application.hpp"
 #include <GLFW/glfw3.h>
 
@@ -21,7 +22,7 @@ std::vector<glm::vec3> Application::build_point_cloud(Grid& grid){
     return grid.get_point_cloud_vec3();
 }
 
-Application::Application() : window_(kWindowWidth, kWindowHeight, "Cathode Visualization"), 
+Application::Application(bool verbose) : window_(kWindowWidth, kWindowHeight, "Cathode Visualization"), 
     camera_(
         Pose(Position(50.0f, 100.0f, 100.0f), Rotation(0.0f, 0.0f, 0.0f)),
         kFieldOfView,
@@ -32,7 +33,8 @@ Application::Application() : window_(kWindowWidth, kWindowHeight, "Cathode Visua
     shader_("shaders/basic.vert", "shaders/basic.frag"),
     grid_(kCellWidth / kResolution, kCellLength / kResolution),
     renderer_(build_point_cloud(grid_)),
-    input_manager_(window_.get_handle(), camera_)
+    input_manager_(window_.get_handle(), camera_),
+    verbose_(verbose)
 {}
 
 void Application::run() {
@@ -56,6 +58,11 @@ void Application::update(float delta_time) {
 void Application::render() {
     glClearColor(0.1f, 0.15f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-
-    renderer_.draw(shader_, camera_.get_view_matrix(), camera_.get_projection_matrix(), glm::mat4(1.0f));
+    bool printed = false;
+    if (verbose_ && !printed){
+        Position current_pos = camera_.get_pose().position;
+        std::cout<<"Cam position: ("<<current_pos.x<<","<<current_pos.y<<","<<current_pos.z<<")"<<std::endl;
+        printed = true;
+    }
+    renderer_.draw(shader_, camera_.get_projection_matrix(), camera_.get_view_matrix(), glm::mat4(1.0f));
 }

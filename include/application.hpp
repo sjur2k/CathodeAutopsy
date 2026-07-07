@@ -11,7 +11,7 @@
 
 class Application {
 public:
-    Application();
+    Application(bool verbose = false);
     void run();
 
 private:
@@ -24,6 +24,7 @@ private:
 
     static std::vector<glm::vec3> build_point_cloud(Grid& grid);
     float last_frame_time_ = 0.0f;
+    bool verbose_ = false;
 
     void update(float delta_time);
     void render();

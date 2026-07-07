@@ -13,6 +13,10 @@ class InputManager {
         double last_x_ = 0.0;
         double last_y_ = 0.0;
         bool orbiting_ = false;
+        glm::vec3 orbit_target_ = glm::vec3(0.0f);
+        float orbit_distance_ = 150.0f;
+        float orbit_yaw_ = 0.0f;
+        float orbit_pitch_ = 45.0f;
         bool first_mouse_ = true;
         float mouse_sensitivity_ = 0.1f;
         float movement_speed_multiplier_ = 50.0f;

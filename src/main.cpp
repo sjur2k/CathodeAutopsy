@@ -65,7 +65,8 @@ int main(){
 #include "application.hpp"
 
 int main(){
-    Application app;
+    bool verbose = false;
+    Application app(verbose);
     app.run();
     return 0;
 }
