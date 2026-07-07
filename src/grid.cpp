@@ -8,7 +8,6 @@
 
 #include "grid.hpp"
 #include "geometry.hpp"
-using namespace std;
 
 float hash2(int x, int y){
     uint32_t h = (uint32_t)(x * 374761393u + (uint32_t)(y * 668265263u));
@@ -69,7 +68,12 @@ void Grid::fill_random_smooth(){
         }
     }
 }
-float Grid::get_value(int i, int j) {
+
+Dimensions Grid::get_dimensions() const{
+    return {rows, cols};
+}
+
+float Grid::get_value(int i, int j) const{
     return grid_serialized[j * cols + i];
 }
 
@@ -84,7 +88,7 @@ void Grid::print_grid() {
 }
 
 void Grid::write_grid_to_PPM() {
-    ofstream out("data/grid.ppm", ios::binary);
+    std::ofstream out("data/grid.ppm", std::ios::binary);
     float minVal = *min_element(grid_serialized.begin(), grid_serialized.end());
     float maxVal = *max_element(grid_serialized.begin(), grid_serialized.end());
     float range = (maxVal - minVal) > 1e-6f ? (maxVal - minVal) : 1.0f;
@@ -106,7 +110,7 @@ void Grid::write_grid_to_PPM() {
 }
 
 void Grid::write_grid_to_csv(float res){
-    ofstream out("data/grid.csv");
+    std::ofstream out("data/grid.csv");
     out <<"#"<<"rows"<<","<<rows<<","<<"cols"<<","<<cols<<","<<"resolution"<<","<<res<<"\n";
     out << "x,y,z\n";
     for (int j = 0; j < rows; j++){
@@ -123,8 +127,8 @@ std::vector<glm::vec3> Grid::get_point_cloud_vec3() {
     for (int j = 0; j < rows; j++) {
         for (int i = 0; i < cols; i++) {
             float x = i + relative_origin.position.x;
-            float y = j + relative_origin.position.y;
-            float z = get_value(i, j) + relative_origin.position.z;
+            float y = get_value(i, j) + relative_origin.position.y;
+            float z = j + relative_origin.position.z;
             point_cloud.emplace_back(x, y, z);
         }
     }

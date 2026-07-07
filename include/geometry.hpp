@@ -54,10 +54,12 @@ MathStruct3D& operator/=(MathStruct3D& lhs, const auto rhs){
     return lhs;
 }
 
+struct IntVector {
+    int a,b,c;
+};
+
 struct Position {
-    float x;
-    float y;
-    float z;
+    float x,y,z;
     using is_3D_vector = void; // allows operator overloads
 
     Position()
@@ -69,21 +71,33 @@ struct Position {
     Position operator+(const Position& other) const {
         return Position{x + other.x, y + other.y, z + other.z};
     }
+    IntVector to_int() const{
+        return {
+            static_cast<int>(x),
+            static_cast<int>(y),
+            static_cast<int>(z)
+        };
+    }
 };
 struct Rotation {
-    float roll;
-    float pitch;
-    float yaw;
+    float pitch, yaw, roll;
     using is_3D_vector = void; // allows operator overloads
 
     Rotation()
-        : roll(0.0f), pitch(0.0f), yaw(0.0f) {}
+        : pitch(0.0f), yaw(0.0f), roll(0.0f) {}
 
-    Rotation(float roll_, float pitch_, float yaw_)
-        : roll(roll_), pitch(pitch_), yaw(yaw_) {}
+    Rotation(float pitch_, float yaw_, float roll_)
+        : pitch(pitch_), yaw(yaw_), roll(roll_) {}
 
     Rotation operator+(const Rotation& other) const {
-        return Rotation{roll + other.roll, pitch + other.pitch, yaw + other.yaw};
+        return Rotation{pitch + other.pitch, yaw + other.yaw, roll + other.roll};
+    }
+    IntVector to_int() const{
+        return {
+            static_cast<int>(pitch),
+            static_cast<int>(yaw),
+            static_cast<int>(roll)
+        };
     }
 };
 

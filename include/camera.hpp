@@ -25,6 +25,7 @@ class Camera {
         Pose get_pose() const;
         void set_pose(const Pose& new_pose);
         void reset_pose();
+        void print_pose();
         glm::mat4 get_view_matrix() const;
         glm::mat4 get_projection_matrix() const;
 };

@@ -3,10 +3,15 @@
 #include <glm/glm.hpp>
 #include "geometry.hpp"
 
+struct Dimensions{
+    int rows,cols;
+};
+
 class Grid{
     public:
         Grid(int r, int c, Pose origin = Pose());
-        float get_value(int i, int j);
+        Dimensions get_dimensions() const;
+        float get_value(int i, int j) const;
         void fill_random_smooth();
         void print_grid();
         void write_grid_to_PPM();

@@ -1,12 +1,13 @@
 #include "renderer.hpp"
 
-Renderer::Renderer(const std::vector<glm::vec3>& points) : num_points_(points.size()) {
+Renderer::Renderer(const std::vector<glm::vec3>& vertices, GLenum draw_mode)
+    : vertex_count_(vertices.size()), draw_mode_(draw_mode) {
     glGenVertexArrays(1, &VAO_);
     glGenBuffers(1, &VBO_);
 
     glBindVertexArray(VAO_);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_);
-    glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(glm::vec3), points.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
     glEnableVertexAttribArray(0);
@@ -32,6 +33,6 @@ void Renderer::draw(
     
     glEnable(GL_PROGRAM_POINT_SIZE);
     glBindVertexArray(VAO_);
-    glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(num_points_));
+    glDrawArrays(draw_mode_, 0, static_cast<GLsizei>(vertex_count_));
     glBindVertexArray(0);
 }

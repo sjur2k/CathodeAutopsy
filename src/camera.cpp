@@ -1,6 +1,8 @@
 #include <iostream>
+#include <iomanip>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <string>
 #include "geometry.hpp"
 #include "grid.hpp"
 #include "camera.hpp"
@@ -35,4 +37,33 @@ glm::mat4 Camera::get_projection_matrix() const {
     projection[2][3] = -1.0f;
     projection[3][2] = -(2.0f * far_plane * near_plane) / (far_plane - near_plane);
     return projection;
+}
+const char* space(auto num){
+    int num_spaces = 0;
+    num >= 0 ? void(num_spaces++) : void();
+    if (abs(num)<=10){
+        num_spaces+=2;
+    } else if (abs(num)<=100){
+        num_spaces++;
+    }
+    std::string spaces;
+    for (int i = 0; i < num_spaces; i++){
+        spaces += " ";
+    } 
+    return spaces.c_str();
+}
+
+void Camera::print_pose(){
+    bool sign = false;
+    auto [x,y,z] = pose.position.to_int();
+    auto [pitch, yaw, roll] = pose.rotation.to_int();
+    std::cout
+        << "Current position:    ("
+        << space(x) << x << ","
+        << space(y) << y << ","
+        << space(z) << z << ")\n"
+        << "Current orientation: ("
+        << space(pitch) << pitch << ","
+        << space(yaw)   << yaw   << ","
+        << space(roll)  << roll  << ")\n\n";
 }

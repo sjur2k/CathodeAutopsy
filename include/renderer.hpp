@@ -7,7 +7,7 @@
 
 class Renderer {
     public:
-        explicit Renderer(const std::vector<glm::vec3>& points);
+        Renderer(const std::vector<glm::vec3>& vertices, GLenum draw_mode = GL_POINTS);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
@@ -19,8 +19,10 @@ class Renderer {
             const glm::mat4& view,
             const glm::mat4& model
         );
+
     private:
         unsigned int VAO_ = 0;
         unsigned int VBO_ = 0;
-        size_t num_points_ = 0;
+        size_t vertex_count_ = 0;
+        GLenum draw_mode_;
 };
