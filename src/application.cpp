@@ -1,5 +1,7 @@
 #include <iostream>
 #include "application.hpp"
+#include "mesh.hpp"
+#include "renderer.hpp"
 #include <GLFW/glfw3.h>
 
 namespace {
@@ -11,14 +13,15 @@ namespace {
     constexpr float kCellLength = 4.0f;
     constexpr float kResolution = 0.05f;
 
+    // Constants for rendering
+    constexpr float kGridWidth = kCellWidth / kResolution;
+    constexpr float kGridLength = kCellLength / kResolution;
+    constexpr float kPadding = 10.0f;
+
     // Camera parameters
     constexpr float kFieldOfView = 90.0f;
     constexpr float kNearPlane = 0.1f;
     constexpr float kFarPlane = 300.0f;
-
-    constexpr float padding = 10.0f;
-    constexpr float width = kCellWidth / kResolution;
-    constexpr float length = kCellLength / kResolution;
 }
 
 static std::vector<glm::vec3> build_point_cloud(Grid& grid){
@@ -27,15 +30,10 @@ static std::vector<glm::vec3> build_point_cloud(Grid& grid){
 }
 
 static std::vector<glm::vec3> build_floor(){
-    
-    return {
-        {   0.0f - padding,  0.0f,   0.0f - padding},
-        {   0.0f - padding,  0.0f,  width + padding},
-        { length + padding,  0.0f,  width + padding},
-        {   0.0f - padding,  0.0f,   0.0f - padding},
-        { length + padding,  0.0f,  width + padding},
-        { length + padding,  0.0f,   0.0f - padding}
-    };
+    return Mesh::floor(
+            0.0f - kPadding, kGridLength + kPadding, // X-dims
+            0.0f - kPadding, kGridWidth + kPadding,  // Z-dims
+            0.0f); // Y (height above zero)
 }
 
 Application::Application() : window_(kWindowWidth, kWindowHeight, "Cathode Visualization"), 
@@ -52,10 +50,6 @@ Application::Application() : window_(kWindowWidth, kWindowHeight, "Cathode Visua
     floor_renderer_(build_floor(), GL_TRIANGLES),
     input_manager_(window_.get_handle(), camera_)
 {
-    float padding = 10.0f;
-    float width = kCellWidth / kResolution;
-    float length = kCellLength / kResolution;
-    floor_renderer_ = Renderer(Mesh::floor_plane(0.0f - padding, length + padding, 0.0f - padding, width + padding, 0.0f ), GL_TRIANGLES)
     glEnable(GL_DEPTH_TEST);
 }
 
@@ -64,8 +58,9 @@ void Application::run() {
         float current_time = static_cast<float>(glfwGetTime());
         float delta_time = current_time - last_frame_time_;
         last_frame_time_ = current_time;
-
-        update(delta_time);
+        if(!input_manager_.is_paused()){
+            update(delta_time);
+        }
         render();
 
         window_.swap_buffers();

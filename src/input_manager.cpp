@@ -10,7 +10,14 @@ InputManager::InputManager(GLFWwindow* window, Camera& camera) : window_(window)
     glfwSetScrollCallback(window_, scroll_callback);
 }
 
+bool InputManager::is_paused(){return paused_;}
+
+void InputManager::set_paused(bool value){
+    paused_ = value;
+}
+
 void InputManager::process_input(float delta_time) {
+
     float velocity = movement_speed_multiplier_ * delta_time;
     Pose current_pose = camera_.get_pose();
     
@@ -117,6 +124,15 @@ void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int a
             case GLFW_KEY_Q:
                 glfwSetWindowShouldClose(window, true);
                 break;
+            case GLFW_KEY_ESCAPE:
+                if (input_manager->is_paused()){
+                    input_manager->set_paused(false); // UNPAUSE
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                } else {
+                    input_manager->set_paused(true); // PAUSE
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                }
+                
         }
     }
 }

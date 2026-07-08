@@ -24,7 +24,7 @@ std::vector<glm::vec3> terrain(const Grid& grid){
     return vertices;
 }
 
-std::vector<glm::vec3> floor_plane(
+std::vector<glm::vec3> floor(
     float x_min, float x_max,
     float z_min, float z_max,
     float y)

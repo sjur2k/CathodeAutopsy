@@ -7,12 +7,15 @@ class InputManager {
     public:
         InputManager(GLFWwindow* window, Camera& camera);
         void process_input(float delta_time);
+        bool is_paused();
+        void set_paused(bool value);
     private:
         GLFWwindow* window_;
         Camera& camera_;
         double last_x_ = 0.0;
         double last_y_ = 0.0;
         bool orbiting_ = false;
+        bool paused_ = false;
         glm::vec3 orbit_target_ = glm::vec3(0.0f);
         float orbit_distance_ = 150.0f;
         float orbit_yaw_ = 0.0f;

@@ -18,6 +18,7 @@ add_executable (CathodeAutopsy
     src/window.cpp
     src/input_manager.cpp
     src/application.cpp
+    src/mesh.cpp
     src/glad/glad.c
 )
 
