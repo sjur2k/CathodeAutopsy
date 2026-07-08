@@ -21,6 +21,7 @@ private:
     Grid grid_;
     Renderer renderer_;
     Renderer floor_renderer_;
+    Renderer pause_overlay_renderer_;
     InputManager input_manager_;
 
     float last_frame_time_ = 0.0f;

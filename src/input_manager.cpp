@@ -98,6 +98,8 @@ void InputManager::mouse_callback(GLFWwindow* window, double xpos, double ypos) 
 void InputManager::mouse_button_callback(GLFWwindow* window, int button, int action, int mods){
     InputManager* input_manager = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
     if (!input_manager) return;
+    if (input_manager->is_paused()) return;
+
     if (button == GLFW_MOUSE_BUTTON_LEFT){
         if (action == GLFW_PRESS){
             input_manager->orbiting_ = true;
@@ -132,7 +134,6 @@ void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int a
                     input_manager->set_paused(true); // PAUSE
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                 }
-                
         }
     }
 }
