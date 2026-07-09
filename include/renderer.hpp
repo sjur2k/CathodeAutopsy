@@ -20,6 +20,7 @@ class Renderer {
             const glm::mat4& model
         );
 
+        void update_vertices(const std::vector<glm::vec3>& vertices);
     private:
         unsigned int VAO_ = 0;
         unsigned int VBO_ = 0;

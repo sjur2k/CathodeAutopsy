@@ -7,7 +7,7 @@ InputManager::InputManager(GLFWwindow* window, Camera& camera) : window_(window)
     glfwSetCursorPosCallback(window_, mouse_callback);
     glfwSetMouseButtonCallback(window_, mouse_button_callback);
     glfwSetKeyCallback(window_, key_callback);
-    glfwSetScrollCallback(window_, scroll_callback);
+    //glfwSetScrollCallback(window_, scroll_callback);
 }
 
 bool InputManager::is_paused(){return paused_;}
@@ -22,7 +22,6 @@ void InputManager::process_input(float delta_time) {
     Pose current_pose = camera_.get_pose();
     
     float yaw_rad = glm::radians(current_pose.rotation.yaw);
-    float pitch_rad = glm::radians(current_pose.rotation.pitch);
     
     Position unit_forward(
         sin(yaw_rad),
@@ -96,6 +95,7 @@ void InputManager::mouse_callback(GLFWwindow* window, double xpos, double ypos) 
 }
 
 void InputManager::mouse_button_callback(GLFWwindow* window, int button, int action, int mods){
+    (void)mods; // Suppress unused-variable-warnings
     InputManager* input_manager = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
     if (!input_manager) return;
     if (input_manager->is_paused()) return;
@@ -115,6 +115,7 @@ void InputManager::mouse_button_callback(GLFWwindow* window, int button, int act
 }
 
 void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
+    (void)scancode; (void)mods; // Suppress unused-variable-warnings
     InputManager* input_manager = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
     if(!input_manager) return;
 
@@ -138,6 +139,6 @@ void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int a
     }
 }
 
-void InputManager::scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
+/* void InputManager::scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
 
-}
+} */

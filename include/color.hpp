@@ -25,5 +25,7 @@ namespace Colors{
     inline constexpr Color Cyan        = { 0.00f, 1.00f, 1.00f};
     inline constexpr Color Magenta     = { 1.00f, 0.00f, 1.00f};
     inline constexpr Color Yellow      = { 1.00f, 1.00f, 0.00f};
+
+    inline constexpr Color WhiteOpaque = { 1.00f, 1.00f, 1.00f, 0.50f};
 }
 

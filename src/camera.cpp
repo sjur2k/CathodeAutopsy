@@ -54,7 +54,6 @@ const char* space(auto num){
 }
 
 void Camera::print_pose(){
-    bool sign = false;
     auto [x,y,z] = pose.position.to_int();
     auto [pitch, yaw, roll] = pose.rotation.to_int();
     std::cout

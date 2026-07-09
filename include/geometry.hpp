@@ -5,53 +5,63 @@ concept MathStruct3D = requires {
     typename T::is_3D_vector; // To ensure following templates only apply to the tagged structs.
 };
 
-template<typename MathStruct3D>
-MathStruct3D operator+(const MathStruct3D& lhs, const MathStruct3D& rhs){
+template<MathStruct3D T>
+T operator+(const T& lhs, const T& rhs){
     auto [a,b,c] = lhs;
     auto [d,e,f] = rhs;
-    return MathStruct3D{a+d,b+e,c+f};
+    return T{a+d,b+e,c+f};
 }
-template<typename MathStruct3D>
-MathStruct3D operator-(const MathStruct3D& lhs, const MathStruct3D& rhs){
+template<MathStruct3D T>
+T operator-(const T& lhs, const T& rhs){
     auto [a,b,c] = lhs;
     auto [d,e,f] = rhs;
-    return MathStruct3D{a-d,b-e,c-f};
+    return T{a-d,b-e,c-f};
 }
-template<typename MathStruct3D>
-MathStruct3D operator*(const MathStruct3D& lhs, const auto rhs){
+template<MathStruct3D T>
+T operator*(const T& lhs, const auto rhs){
     auto [a,b,c] = lhs;
-    return MathStruct3D(a*rhs, b*rhs, c*rhs); // to allow implicit truncating back to integer if needed.
+    return T(a*rhs, b*rhs, c*rhs);
 }
-template<typename MathStruct3D>
-MathStruct3D operator/(const MathStruct3D& lhs, const auto rhs){
+template<MathStruct3D T>
+T operator/(const T& lhs, const auto rhs){
     auto [a,b,c] = lhs;
-    return MathStruct3D(a/rhs, b/rhs, c/rhs);
+    return T(a/rhs, b/rhs, c/rhs);
 }
-template<typename MathStruct3D>
-MathStruct3D& operator+=(MathStruct3D& lhs, const MathStruct3D& rhs){
+template<MathStruct3D T>
+T& operator+=(T& lhs, const T& rhs){
     auto& [a,b,c] = lhs;
     auto [d,e,f] = rhs;
     a+=d; b+=e; c+=f;
     return lhs;
 }
-template<typename MathStruct3D>
-MathStruct3D& operator-=(MathStruct3D& lhs, const MathStruct3D& rhs){
+template<MathStruct3D T>
+T& operator-=(T& lhs, const T& rhs){
     auto& [a,b,c] = lhs;
     auto [d,e,f] = rhs;
     a-=d; b-=e; c-=f;
     return lhs;
 }
-template<typename MathStruct3D>
-MathStruct3D& operator*=(MathStruct3D& lhs, const auto rhs){
+template<MathStruct3D T>
+T& operator*=(T& lhs, const auto rhs){
     auto& [a,b,c] = lhs;
     a*=rhs; b*=rhs; c*=rhs;
     return lhs;
 }
-template<typename MathStruct3D>
-MathStruct3D& operator/=(MathStruct3D& lhs, const auto rhs){
+template<MathStruct3D T>
+T& operator/=(T& lhs, const auto rhs){
     auto& [a,b,c] = lhs;
     a/=rhs; b/=rhs; c/=rhs;
     return lhs;
+}
+template<MathStruct3D T>
+bool operator==(const T lhs, const T rhs){
+    auto [a,b,c] = lhs;
+    auto [d,e,f] = rhs;
+    return a==d && b==e && c==f;
+}
+template<MathStruct3D T>
+bool operator!=(const T lhs, const T rhs){
+    return !(lhs==rhs);
 }
 
 struct IntVector {
@@ -129,5 +139,11 @@ struct Pose {
     }
     // Defining a multiplication operator does not make sense here, 
     // as the two structs are conceptually different and do not scale the same way
+    bool operator==(const Pose other){
+        return this->position == other.position && this->rotation == other.rotation;
+    }
+    bool operator!=(const Pose other){
+        return !(*this==other);
+    }
 };
 

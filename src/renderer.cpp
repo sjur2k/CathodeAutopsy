@@ -36,3 +36,10 @@ void Renderer::draw(
     glDrawArrays(draw_mode_, 0, static_cast<GLsizei>(vertex_count_));
     glBindVertexArray(0);
 }
+
+void Renderer::update_vertices(const std::vector<glm::vec3>& vertices){
+    vertex_count_ = vertices.size();
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(glm::vec3), vertices.data(), GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}

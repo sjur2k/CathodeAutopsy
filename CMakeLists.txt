@@ -6,7 +6,20 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(glm CONFIG REQUIRED)
-find_package(Freetype REQUIRED)
+include(FetchContent)
+FetchContent_Declare(
+    freetype
+    GIT_REPOSITORY https://github.com/freetype/freetype.git
+    GIT_TAG        VER-2-13-3
+)
+
+set(FT_DISABLE_ZLIB TRUE CACHE BOOL "" FORCE)
+set(FT_DISABLE_BZIP2 TRUE CACHE BOOL "" FORCE)
+set(FT_DISABLE_PNG TRUE CACHE BOOL "" FORCE)
+set(FT_DISABLE_HARFBUZZ TRUE CACHE BOOL "" FORCE)
+set(FT_DISABLE_BROTLI TRUE CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(freetype)
 
 add_library(glad STATIC 
     ${CMAKE_SOURCE_DIR}/src/glad/glad.c)
@@ -25,6 +38,7 @@ add_executable (CathodeAutopsy
     src/input_manager.cpp
     src/application.cpp
     src/mesh.cpp
+    src/text_renderer.cpp
 )
 
 target_compile_options(CathodeAutopsy PRIVATE -Wall -Wextra -Wpedantic)
@@ -49,5 +63,5 @@ target_link_libraries(CathodeAutopsy PRIVATE
     glfw3
     opengl32
     glm::glm
-    Freetype::Freetype
+    freetype
 )
