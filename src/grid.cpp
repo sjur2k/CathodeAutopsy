@@ -10,10 +10,10 @@
 #include "geometry.hpp"
 
 float hash2(int x, int y){
-    uint32_t h = (uint32_t)(x * 374761393u + (uint32_t)(y * 668265263u));
+    uint32_t h = static_cast<uint32_t>(x * 374761393u + static_cast<uint32_t>(y * 668265263u));
     h = (h ^ (h >> 13)) * 1274126177u;
     h ^= h >> 16;
-    return (h & 0xFFFFFF) / (float)0x1000000;
+    return (h & 0xFFFFFF) / static_cast<float>(0x1000000);
 }
 
 float smooth(float t){
@@ -21,13 +21,13 @@ float smooth(float t){
 }
 
 float valueNoise(float x, float y){
-    int x0 = (int)floor(x);
+    int x0 = static_cast<int>(floor(x));
     int x1 = x0 + 1;
-    int y0 = (int)floor(y);
+    int y0 = static_cast<int>(floor(y));
     int y1 = y0 + 1;
 
-    float sx = smooth(x - (float)x0);
-    float sy = smooth(y - (float)y0);
+    float sx = smooth(x - static_cast<float>(x0));
+    float sy = smooth(y - static_cast<float>(y0));
 
     float n0 = hash2(x0, y0);
     float n1 = hash2(x1, y0);
@@ -51,36 +51,30 @@ float fbm(float x, float y, int octaves, float persistence = 0.5f) {
     return sum / norm;  // back to ~[0,1]
 }
 
-Grid::Grid(int r, int c, Pose origin) {
-    rows = r;
-    cols = c;
-    grid_serialized = std::vector<float>(r * c);
-    relative_origin = origin;
-}
 void Grid::fill_random_smooth(){
     float scale = 1.0f / 32.0f;
     int octaves = 6;
     float persistence = 0.4f;
     float z_scale = 10.0f;
-    for (int j = 0; j < rows; j++){
-        for (int i = 0; i < cols; i++){
-            grid_serialized[j * cols + i] = z_scale*fbm(i*scale, j*scale, octaves, persistence);
+    for (int j = 0; j < rows_; j++){
+        for (int i = 0; i < cols_; i++){
+            grid_serialized_[j * cols_ + i] = z_scale*fbm(i*scale, j*scale, octaves, persistence);
         }
     }
 }
 
 Dimensions Grid::get_dimensions() const{
-    return {rows, cols};
+    return {rows_, cols_};
 }
 
 float Grid::get_value(int i, int j) const{
-    return grid_serialized[j * cols + i];
+    return grid_serialized_[j * cols_ + i];
 }
 
 
 void Grid::print_grid() {
-    for (int j = 0; j < rows; j++){
-        for (int i = 0; i < cols; i++){
+    for (int j = 0; j < rows_; j++){
+        for (int i = 0; i < cols_; i++){
             printf("%f ", get_value(i, j));
         }
         printf("\n");
@@ -89,13 +83,13 @@ void Grid::print_grid() {
 
 void Grid::write_grid_to_PPM() {
     std::ofstream out("data/grid.ppm", std::ios::binary);
-    float minVal = *min_element(grid_serialized.begin(), grid_serialized.end());
-    float maxVal = *max_element(grid_serialized.begin(), grid_serialized.end());
+    float minVal = *min_element(grid_serialized_.begin(), grid_serialized_.end());
+    float maxVal = *max_element(grid_serialized_.begin(), grid_serialized_.end());
     float range = (maxVal - minVal) > 1e-6f ? (maxVal - minVal) : 1.0f;
-    out << "P6\n" << cols << " " << rows << "\n255\n";
+    out << "P6\n" << cols_ << " " << rows_ << "\n255\n";
     int BNW = 1; // Set to 1 for black and white, 0 for color
-    for (int k = 0; k < cols * rows; ++k) {
-        float t = (grid_serialized[k] - minVal) / range; // normalize
+    for (int k = 0; k < cols_ * rows_; ++k) {
+        float t = (grid_serialized_[k] - minVal) / range; // normalize
         if (BNW == 1){
             unsigned char gray = static_cast<unsigned char>(t * 255);
             out.put(gray).put(gray).put(gray);
@@ -111,10 +105,10 @@ void Grid::write_grid_to_PPM() {
 
 void Grid::write_grid_to_csv(float res){
     std::ofstream out("data/grid.csv");
-    out <<"#"<<"rows"<<","<<rows<<","<<"cols"<<","<<cols<<","<<"resolution"<<","<<res<<"\n";
+    out <<"#"<<"rows"<<","<<rows_<<","<<"cols"<<","<<cols_<<","<<"resolution"<<","<<res<<"\n";
     out << "x,y,z\n";
-    for (int j = 0; j < rows; j++){
-        for (int i = 0; i < cols; i++){
+    for (int j = 0; j < rows_; j++){
+        for (int i = 0; i < cols_; i++){
             out << i << "," << j << "," << get_value(i,j) << "\n";
         }
     }
@@ -123,12 +117,12 @@ void Grid::write_grid_to_csv(float res){
 
 std::vector<glm::vec3> Grid::get_point_cloud_vec3() {
     std::vector<glm::vec3> point_cloud;
-    point_cloud.reserve(rows * cols);
-    for (int j = 0; j < rows; j++) {
-        for (int i = 0; i < cols; i++) {
-            float x = i + relative_origin.position.x;
-            float y = get_value(i, j) + relative_origin.position.y;
-            float z = j + relative_origin.position.z;
+    point_cloud.reserve(rows_ * cols_);
+    for (int j = 0; j < rows_; j++) {
+        for (int i = 0; i < cols_; i++) {
+            float x = i + relative_origin_.position.x;
+            float y = get_value(i, j) + relative_origin_.position.y;
+            float z = j + relative_origin_.position.z;
             point_cloud.emplace_back(x, y, z);
         }
     }

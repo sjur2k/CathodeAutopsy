@@ -9,7 +9,12 @@ struct Dimensions{
 
 class Grid{
     public:
-        Grid(int r, int c, Pose origin = Pose());
+        Grid(int rows, int cols, Pose relative_origin = Pose()) : 
+            rows_(rows),
+            cols_(cols),
+            grid_serialized_(std::vector<float>(rows * cols)),
+            relative_origin_(relative_origin) 
+        {}
         Dimensions get_dimensions() const;
         float get_value(int i, int j) const;
         void fill_random_smooth();
@@ -18,7 +23,7 @@ class Grid{
         void write_grid_to_csv(float res);
         std::vector<glm::vec3> get_point_cloud_vec3();
     private:
-        int rows, cols;
-        Pose relative_origin;
-        std::vector<float> grid_serialized;
+        int rows_, cols_;
+        Pose relative_origin_;
+        std::vector<float> grid_serialized_;
 };

@@ -29,65 +29,6 @@ namespace {
     constexpr float kFarPlane = 300.0f;
 }
 
-struct TextLine { // TODO: REPLACEBY TEXT struct
-    std::string text;
-    float scale;
-    TextRenderer& renderer;
-};
-
-struct TextBlockLayout {
-    std::vector<std::pair<Text, TextRenderer*>> texts;
-    glm::mat4 box_model;
-};
-
-static TextBlockLayout build_text_block(
-    const std::vector<TextLine>& lines,
-    float x_fraction, float y_fraction,
-    float line_spacing, float padding,
-    const Color& text_color
-){
-    std::vector<glm::vec2> dims;
-    dims.reserve(lines.size());
-    float total_height = 0.0f;
-    float max_width = 0.0f;
-    for (const auto& line : lines) {
-        glm::vec2 d = line.renderer.measure_text(line.text, line.scale);
-        dims.push_back(d);
-        total_height += d.y;
-        max_width = std::max(max_width, d.x);
-    }
-    total_height += line_spacing * static_cast<float>(lines.size() - 1);
-
-    float center_x = kWindowWidth * x_fraction;
-    float center_y = kWindowHeight * y_fraction;
-
-    float cursor_top = center_y + total_height * 0.5f;  
-
-    TextBlockLayout layout;
-    layout.texts.reserve(lines.size());
-
-    for (size_t i = 0; i < lines.size(); ++i) {
-        float baseline_y = cursor_top - dims[i].y;           
-        float x = center_x - dims[i].x * 0.5f;                     
-
-        layout.texts.emplace_back(
-            Text(lines[i].text, glm::vec2(x, baseline_y), lines[i].scale, text_color),
-            &lines[i].renderer
-        );
-
-        cursor_top = baseline_y - line_spacing;                    
-    }
-
-    layout.box_model = build_ui_quad_model(
-        center_x - (max_width * 0.5f) - padding,
-        center_y - (total_height * 0.5f) - padding,
-        max_width + 2.0f * padding,
-        total_height + 2.0f * padding
-    );
-
-    return layout;
-}
-
 static std::vector<glm::vec3> build_point_cloud(Grid& grid){
     grid.fill_random_smooth();
     return grid.get_point_cloud_vec3();
@@ -122,6 +63,10 @@ static glm::mat4 build_ui_quad_model(float x, float y, float width, float height
     );
     model = glm::scale(model, glm::vec3(width, height, 1.0f));
     return model;
+}
+
+static glm::mat4 build_ui_quad_model(TextBlockLayout block){
+    return build_ui_quad_model(block.box_x, block.box_y, block.box_width, block.box_height);
 }
 
 Application::Application() : 
@@ -225,7 +170,7 @@ void Application::draw_hud(){
 
     glm::vec2 text_dims = regular_text_renderer_.measure_text(msg, text_scale);
     glm::vec2 text_coords(textbox_padding, kWindowHeight - text_dims.y - textbox_padding);
-    Text text(msg, text_coords, text_scale, text_color);
+    TextLine text(msg, text_coords, text_scale, text_color);
 
     glm::mat4 textbox_model = build_ui_quad_model(
         0.0f,
@@ -255,90 +200,44 @@ void Application::draw_pause_overlay(){
     
     TextBlockLayout top_block = build_text_block(
         {
-            {"PAUSED",              1.0f, display_text_renderer_},
-            {"Press ESC to resume", 0.8f, regular_text_renderer_},
+            TextLine("PAUSED", 0.0f, 0.0f, 1.0f, text_color, &display_text_renderer_),
+            TextLine("Press ESC to resume", 0.0f, 0.0f, 0.8f, text_color, &regular_text_renderer_),
         },
-        0.50f, 0.85f,
-        lineshift, textbox_padding,
-        text_color
+        kWindowWidth * 0.5f, kWindowHeight * 0.85f,
+        lineshift, textbox_padding
     );
 
     TextBlockLayout bottom_block = build_text_block(
         {
-            {"Controls",          0.8f, display_text_renderer_},
-            {"W/A/S/D: Movement", 0.6f, regular_text_renderer_},
+            TextLine("Controls", 0.0f, 0.0f, 0.8f, text_color, &display_text_renderer_),
+            TextLine("W/A/S/D: Horizontal Movement", 0.0f, 0.0f, 0.6f, text_color, &regular_text_renderer_),
+            TextLine("LSHIFT/SPACE: Vertical Movement", 0.0f, 0.0f, 0.6f, text_color, &regular_text_renderer_),
+            TextLine("MOUSE1 (HOLD): Pan", 0.0f, 0.0f, 0.6f, text_color, &regular_text_renderer_)
         },
-        0.5f, 0.5f,
-        lineshift, textbox_padding,
-        text_color
+        kWindowWidth * 0.5f, kWindowHeight * 0.5f,
+        lineshift, textbox_padding
     );
 
-    glm::mat4 overlay_model = build_ui_quad_model(0.0f,0.0f,kWindowWidth, kWindowHeight);
     shader_.setVec4("color", Colors::WhiteOpaque);
-    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), overlay_model);
+    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
+        build_ui_quad_model(0.0f,0.0f,kWindowWidth, kWindowHeight)
+    );
+    
     shader_.setVec4("color", Colors::Background);
-    glm::mat4 top_textbox_model = top_block.box_model;
-    glm::mat4 bottom_textbox_model = bottom_block.box_model;
-
-    /* std::string msg1 = "PAUSED";
-    float text1_scale = 1.0f;
-    glm::vec2 text1_dims = display_text_renderer_.measure_text(msg1, text1_scale);
-    glm::vec2 text1_coords(
-        kWindowWidth  * 0.50f - text1_dims.x * 0.50f,
-        kWindowHeight * 0.85f - text1_dims.y * 0.50f);
-    Text text1(msg1, text1_coords, text1_scale, text_color);
-
-    std::string msg2 = "Press ESC to resume";
-    float text2_scale = 0.8f;
-    glm::vec2 text2_dims = regular_text_renderer_.measure_text(msg2, text2_scale);
-    glm::vec2 text2_coords(
-        kWindowWidth  * 0.50f - text2_dims.x * 0.50f,
-        kWindowHeight * 0.85f - text2_dims.y * 0.50f - text1_dims.y * 0.5f - lineshift);
-    Text text2(msg2, text2_coords, text2_scale, text_color);
-    
-    std::string msg3 = "Controls";
-    float text3_scale = 0.8f;
-    glm::vec2 text3_dims = display_text_renderer_.measure_text(msg3, text3_scale);
-    glm::vec2 text3_coords(
-        (kWindowWidth - text3_dims.x) * 0.5f,
-        kWindowHeight * 0.5f - text3_dims.y * 0.5f);
-    Text text3(msg3, text3_coords, text3_scale, text_color);
-
-    std::string msg4 = "W/A/S/D: Movement";
-    float text4_scale = 0.6f;
-    glm::vec2 text4_dims = regular_text_renderer_.measure_text(msg4, text4_scale);
-    glm::vec2 text4_coords(
-        (kWindowWidth - text4_dims.x) * 0.5f,
-        kWindowHeight * 0.5f - text4_dims.y * 0.5 - text3_dims.y * 1.2f - lineshift);
-    Text text4(msg4, text4_coords, text4_scale, text_color);
-
-    glm::mat4 overlay_model = build_ui_quad_model(0.0f,0.0f,kWindowWidth,kWindowHeight);
-    
-    glm::mat4 top_textbox_model = build_ui_quad_model(
-        (kWindowWidth - std::max(text1_dims.x, text2_dims.x)) * 0.5f - textbox_padding,
-        kWindowHeight * 0.85f - text1_dims.y * 0.5f - text2_dims.y * 0.5f - textbox_padding - lineshift,
-        std::max(text1_dims.x, text2_dims.x) + 2.0f * textbox_padding,
-        text1_dims.y + text2_dims.y + 2.0f * textbox_padding + lineshift
+    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
+        build_ui_quad_model(top_block)
+    );
+    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
+        build_ui_quad_model(bottom_block)
     );
 
-    glm::mat4 bottom_textbox_model = build_ui_quad_model(
-        (kWindowWidth - std::max(text3_dims.x, text4_dims.x)) * 0.5f - textbox_padding,
-        kWindowHeight * 0.5f - text4_dims.y * 0.5f - text4_dims.y * 0.5f - textbox_padding - lineshift,
-        std::max(text3_dims.x, text4_dims.x) + 2.0f * textbox_padding,
-        text3_dims.y + text4_dims.y + 2.0f * textbox_padding + lineshift // times # lines 
-    ); 
+    for (auto& text : top_block.texts){
+        text.renderer->render_text(text);
+    }
+    for (auto& text : bottom_block.texts){
+        text.renderer->render_text(text);
+    }
 
-    // Rendering (order matters)
-    shader_.setVec4("color", Colors::WhiteOpaque);
-    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), overlay_model);
-    shader_.setVec4("color", Colors::Background);
-    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), top_textbox_model);
-    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), bottom_textbox_model);
-    display_text_renderer_.render_text(text1);
-    regular_text_renderer_.render_text(text2);
-    regular_text_renderer_.render_text(text3);
-    regular_text_renderer_.render_text(text4);
-    */
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 }

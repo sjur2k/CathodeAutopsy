@@ -6,12 +6,12 @@
 
 class Camera {
     private:
-        Pose pose;
-        Pose initial_pose;
-        float fov;
-        float aspect_ratio;
-        float near_plane;
-        float far_plane;
+        Pose pose_;
+        Pose initial_pose_;
+        float fov_;
+        float aspect_ratio_;
+        float near_plane_;
+        float far_plane_;
     public:
         Camera(
             Pose initial_pose = Pose(),
@@ -19,8 +19,8 @@ class Camera {
             float aspect_ratio = 1.0f,
             float near_plane = 0.1f,
             float far_plane = 100.0f
-        ) : pose(initial_pose), initial_pose(initial_pose), fov(field_of_view), 
-        aspect_ratio(aspect_ratio), near_plane(near_plane), far_plane(far_plane) {};
+        ) : pose_(initial_pose), initial_pose_(initial_pose), fov_(field_of_view), 
+        aspect_ratio_(aspect_ratio), near_plane_(near_plane), far_plane_(far_plane) {};
         
         Pose get_pose() const;
         void set_pose(const Pose& new_pose);
