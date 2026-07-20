@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "tinyfiledialogs/tinyfiledialogs.h"
 
 namespace {
     constexpr int kWindowWidth = 1920;
@@ -91,12 +92,30 @@ Application::Application() :
 }
 
 void Application::run() {
+    AppState state = AppState::Startup;
+    input_manager_.set_active_page(UIPage::StartMenu);
+    input_manager_.set_mode(InputMode::Interactive);
     bool was_paused = false;
     int last_fb_width = 0, last_fb_height = 0;
     glfwGetFramebufferSize(window_.get_handle(), &last_fb_width, &last_fb_height);
     last_camera_pose_ = camera_.get_pose();
 
     while (!window_.should_close()) {
+        glfwPollEvents();
+        if(state == AppState::Startup){
+            // check if open_file action is triggered
+            update_startup();
+            render_startup();
+            window_.swap_buffers();
+            if (startup_finished()){
+                state = AppState::Running;
+                input_manager_.set_active_page(UIPage::None);
+                input_manager_.set_mode(InputMode::Locked);
+                last_frame_time_ = static_cast<float>(glfwGetTime());
+            }
+            continue;
+        }
+
         bool paused_now = input_manager_.is_paused();
         if (paused_now){
             glfwWaitEvents();
@@ -107,9 +126,15 @@ void Application::run() {
         paused_now = input_manager_.is_paused();
         if (was_paused != paused_now){
             needs_redraw_ = true;
+            if (!was_paused && paused_now){
+                input_manager_.set_active_page(UIPage::PauseMenu);
+                input_manager_.set_mode(InputMode::Interactive);
+            }
             if (was_paused && !paused_now){
+                input_manager_.set_active_page(UIPage::None);
+                input_manager_.set_mode(InputMode::Locked);
                 last_frame_time_ = static_cast<float>(glfwGetTime());
-            }    
+            } 
         }
         was_paused = paused_now;
 
@@ -127,7 +152,6 @@ void Application::run() {
 
         if(!paused_now){
             update(delta_time);
-            
             Pose current_pose = camera_.get_pose();
             if (current_pose != last_camera_pose_){
                 needs_redraw_ = true,
@@ -242,6 +266,14 @@ void Application::draw_pause_overlay(){
     glEnable(GL_DEPTH_TEST);
 }
 
+void Application::update_startup(){
+
+}
+
+void Application::render_startup(){
+    
+}
+
 void Application::update(float delta_time) {
     input_manager_.process_input(delta_time);
 }
@@ -253,4 +285,8 @@ void Application::render() {
     } else {
         draw_pause_overlay();
     }       
+}
+
+bool Application::startup_finished(){
+    return false;
 }

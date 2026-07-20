@@ -86,6 +86,30 @@ void InputManager::orbit(double xpos, double ypos) {
     camera_.set_pose(current_pose);
 }
 
+void InputManager::set_mode(InputMode mode){
+    mode_ = mode;
+}
+
+InputMode InputManager::get_mode() const {
+    return mode_;
+}
+
+void InputManager::set_button_box(UIAction action, UIBox box){
+    ui_buttons_[action] = box;
+}
+
+std::optional<UIAction> InputManager::consume_triggered_action(){
+    auto result = triggered_action_;
+    triggered_action_.reset();
+    return result;
+}
+
+bool InputManager::consume_open_file_request(){
+    bool was_requested = open_file_requested_;
+    open_file_requested_ = false;
+    return was_requested;
+}
+
 void InputManager::mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     InputManager* input_manager = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
     if (!input_manager) return;
@@ -100,18 +124,33 @@ void InputManager::mouse_button_callback(GLFWwindow* window, int button, int act
     if (!input_manager) return;
     if (input_manager->is_paused()) return;
 
-    if (button == GLFW_MOUSE_BUTTON_LEFT){
-        if (action == GLFW_PRESS){
+    // check different button actions
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
+        if (input_manager->get_mode() == InputMode::Interactive){
+            double x,y;
+            glfwGetCursorPos(window,&x,&y);
+            auto it = input_manager->page_buttons_.find(input_manager->active_page_);
+            if (it == input_manager->page_buttons_.end()){return;}
+            for (auto& [action_id, box] : it->second){
+                if (box.contains(x,y)){
+                    input_manager->triggered_action_ = action_id;
+                    break;
+                }
+            }
+        } else if (input_manager->get_mode() == InputMode::Locked){
             input_manager->orbiting_ = true;
             input_manager->first_mouse_ = true;
-        } else if (action == GLFW_RELEASE){
-            input_manager->orbiting_ = false;
-            input_manager->first_mouse_ = false;
         }
     }
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS){
-        input_manager->camera_.reset_pose();
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE){
+        input_manager->orbiting_ = false;
+        input_manager->first_mouse_ = false;
     }
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS){
+        if (input_manager->get_mode() == InputMode::Locked){
+            input_manager->camera_.reset_pose();
+        }
+    }    
 }
 
 void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){

@@ -11,6 +11,12 @@
 #include "text_renderer.hpp"
 #include "geometry.hpp"
 
+enum class AppState {
+    Startup,
+    Running,
+    Paused
+};
+
 class Application {
 public:
     Application();
@@ -30,10 +36,14 @@ private:
     glm::mat4 ui_projection_;
     float last_frame_time_ = 0.0f;
     bool needs_redraw_ = true;
+    bool startup_finished();
     
     void draw_scene();
     void draw_hud();
     void draw_pause_overlay();
+
+    void update_startup();
+    void render_startup();
 
     void update(float delta_time);
     void render();

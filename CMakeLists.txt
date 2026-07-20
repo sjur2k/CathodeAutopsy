@@ -22,11 +22,22 @@ set(FT_DISABLE_BROTLI TRUE CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(freetype)
 
 add_library(glad STATIC 
-    ${CMAKE_SOURCE_DIR}/src/glad/glad.c)
+    ${CMAKE_SOURCE_DIR}/src/glad/glad.c
+    )
 
 target_include_directories(glad SYSTEM PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
+
+add_library(tinyfiledialogs STATIC
+    ${CMAKE_SOURCE_DIR}/src/tinyfiledialogs/tinyfiledialogs.c
+)
+target_include_directories(tinyfiledialogs SYSTEM PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+)
+if (WIN32)
+    target_link_libraries(tinyfiledialogs PUBLIC comdlg32 ole32)
+endif()
 
 add_executable (CathodeAutopsy 
     src/main.cpp
@@ -64,4 +75,5 @@ target_link_libraries(CathodeAutopsy PRIVATE
     opengl32
     glm::glm
     freetype
+    tinyfiledialogs
 )
