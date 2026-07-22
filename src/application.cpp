@@ -5,6 +5,7 @@
 #include "color.hpp"
 #include "renderer.hpp"
 #include "geometry.hpp"
+#include "paths.hpp"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -39,6 +40,14 @@ static std::vector<glm::vec3> build_unit_quad(){
     return {
         {-0.5f, -0.5f, 0.0f}, { 0.5f, -0.5f, 0.0f}, { 0.5f,  0.5f, 0.0f},
         {-0.5f, -0.5f, 0.0f}, { 0.5f,  0.5f, 0.0f}, {-0.5f,  0.5f, 0.0f},
+    };
+}
+
+static std::vector<TexturedVertex> build_textured_unit_quad(){
+    return {
+        {{-0.5f,-0.5f,0.0f},{0.0f,0.0f}}, {{0.5f,-0.5f,0.0f},{1.0f,0.0f}}, 
+        {{0.5f,0.5f,0.0f},{1.0f,1.0f}}, {{-0.5f,-0.5f,0.0f},{0.0f,0.0f}}, 
+        {{0.5f,0.5f,0.0f},{1.0f,1.0f}}, {{-0.5f,0.5f,0.0f},{0.0f,1.0f}}
     };
 }
 
@@ -78,12 +87,29 @@ Application::Application() :
         static_cast<float>(kWindowWidth) / static_cast<float>(kWindowHeight),
         kNearPlane,
         kFarPlane),
-    shader_("shaders/basic.vert", "shaders/basic.frag"),
+    shader_(
+        paths::asset("shaders/basic.vert").string().c_str(),
+        paths::asset("shaders/basic.frag").string().c_str()
+    ),
+    textured_shader_(
+        paths::asset("shaders/textured.vert").string().c_str(),
+        paths::asset("shaders/textured.frag").string().c_str()
+    ),
+    logo_texture_(
+        paths::asset("textures/hydro_logo.bmp").string().c_str()
+    ),
     grid_(kCellWidth / kResolution, kCellLength / kResolution),
     point_cloud_renderer_(build_point_cloud(grid_), GL_POINTS),
     quad_renderer_(build_unit_quad(), GL_TRIANGLES),
-    display_text_renderer_("fonts/IvarDisplayHydro-Regular.ttf", 96, kWindowWidth, kWindowHeight),
-    regular_text_renderer_("fonts/IvarTextHydro-Regular.ttf", 48, kWindowWidth, kWindowHeight),
+    textured_quad_renderer_(build_textured_unit_quad(), GL_TRIANGLES),
+    display_text_renderer_(
+        paths::asset("fonts/IvarDisplayHydro-Regular.ttf").string().c_str(), 
+        96, kWindowWidth, kWindowHeight
+    ),
+    regular_text_renderer_(
+        paths::asset("fonts/IvarTextHydro-Regular.ttf").string().c_str(), 
+        48, kWindowWidth, kWindowHeight
+    ),
     input_manager_(window_.get_handle(), camera_)
 {
     glEnable(GL_DEPTH_TEST);
@@ -93,84 +119,101 @@ Application::Application() :
 
 void Application::run() {
     AppState state = AppState::Startup;
+    bool startup_rendered = false;
     input_manager_.set_active_page(UIPage::StartMenu);
     input_manager_.set_mode(InputMode::Interactive);
-    bool was_paused = false;
     int last_fb_width = 0, last_fb_height = 0;
     glfwGetFramebufferSize(window_.get_handle(), &last_fb_width, &last_fb_height);
     last_camera_pose_ = camera_.get_pose();
 
     while (!window_.should_close()) {
-        glfwPollEvents();
-        if(state == AppState::Startup){
-            // check if open_file action is triggered
-            update_startup();
-            render_startup();
-            window_.swap_buffers();
-            if (startup_finished()){
-                state = AppState::Running;
-                input_manager_.set_active_page(UIPage::None);
-                input_manager_.set_mode(InputMode::Locked);
-                last_frame_time_ = static_cast<float>(glfwGetTime());
+        switch(state){
+            case AppState::Startup: {
+                if (startup_rendered){
+                    glfwWaitEvents();
+                } else {
+                    render_startup();
+                    window_.swap_buffers();
+                    startup_rendered = true;
+                }
+                update_startup();
+                if (startup_finished()){
+                    state = AppState::Running;
+                    input_manager_.set_active_page(UIPage::None);
+                    input_manager_.set_mode(InputMode::Locked);
+                    last_frame_time_ = static_cast<float>(glfwGetTime());
+                }
+                break;
             }
-            continue;
-        }
+            case AppState::Running: {
+                if (input_manager_.has_active_input()){ // Prevents busy idling
+                    glfwPollEvents();
+                } else {
+                    glfwWaitEvents();
+                    last_frame_time_ = static_cast<float>(glfwGetTime());
+                }
 
-        bool paused_now = input_manager_.is_paused();
-        if (paused_now){
-            glfwWaitEvents();
-        } else {
-            glfwPollEvents();
-        }
-        
-        paused_now = input_manager_.is_paused();
-        if (was_paused != paused_now){
-            needs_redraw_ = true;
-            if (!was_paused && paused_now){
-                input_manager_.set_active_page(UIPage::PauseMenu);
-                input_manager_.set_mode(InputMode::Interactive);
-            }
-            if (was_paused && !paused_now){
-                input_manager_.set_active_page(UIPage::None);
-                input_manager_.set_mode(InputMode::Locked);
-                last_frame_time_ = static_cast<float>(glfwGetTime());
+                if (input_manager_.is_paused()){
+                    state = AppState::Paused;
+                    input_manager_.set_active_page(UIPage::PauseMenu);
+                    input_manager_.set_mode(InputMode::Interactive);
+                    needs_redraw_ = true;
+                    break;
+                }
+                
+                needs_redraw_ |= check_resize(last_fb_width, last_fb_height);
+
+                float current_time = static_cast<float>(glfwGetTime());
+                float delta_time = current_time - last_frame_time_;
+                last_frame_time_ = current_time;
+
+                update_running(delta_time);
+
+                Pose current_pose = camera_.get_pose();
+                if (current_pose != last_camera_pose_){
+                    needs_redraw_ = true,
+                    last_camera_pose_ = current_pose;
+                }
+                
+                if(needs_redraw_){ // Assumes constant grid, no moving objects etc..
+                    render_running();
+                    window_.swap_buffers();
+                    needs_redraw_ = false;
+                }
+                break;
             } 
-        }
-        was_paused = paused_now;
+            case AppState::Paused: {
+                glfwWaitEvents();
 
-        int fb_width, fb_height;
-        glfwGetFramebufferSize(window_.get_handle(), &fb_width, &fb_height);
-        if (fb_width != last_fb_width || fb_height != last_fb_height){
-            last_fb_width = fb_width;
-            last_fb_height = fb_height;
-            needs_redraw_ = true;
-        }
+                if (!input_manager_.is_paused()){
+                    state = AppState::Running;
+                    input_manager_.set_active_page(UIPage::None);
+                    input_manager_.set_mode(InputMode::Locked);
+                    last_frame_time_ = static_cast<float>(glfwGetTime());
+                    needs_redraw_ = true;
+                    break;
+                }
+                
+                needs_redraw_ |= check_resize(last_fb_width, last_fb_height);
 
-        float current_time = static_cast<float>(glfwGetTime());
-        float delta_time = current_time - last_frame_time_;
-        last_frame_time_ = current_time;
-
-        if(!paused_now){
-            update(delta_time);
-            Pose current_pose = camera_.get_pose();
-            if (current_pose != last_camera_pose_){
-                needs_redraw_ = true,
-                last_camera_pose_ = current_pose;
+                if (needs_redraw_){
+                    render_paused();
+                    window_.swap_buffers();
+                    needs_redraw_ = false;
+                }
+                break;
             }
-        }
-        if(needs_redraw_){ // Assumes constant grid, no moving objects etc..
-            render();
-            window_.swap_buffers();
-            needs_redraw_ = false;
         }
     }
 }
 
-void Application::draw_scene(){
+void Application::clear_screen(){
     auto [r,g,b,opacity] = Colors::Background;
     glClearColor(r,g,b,opacity);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
+}
+
+void Application::draw_scene(){
     glm::mat4 proj = camera_.get_projection_matrix();
     glm::mat4 view = camera_.get_view_matrix();
 
@@ -205,7 +248,7 @@ void Application::draw_hud(){
 
     shader_.setVec4("color", Colors::Background);
     quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), textbox_model);
-    shader_.setVec4("color", Colors::WhiteOpaque);
+    shader_.setVec4("color", Colors::WhiteHalfOpaque);
     quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), textbox_model);
     regular_text_renderer_.render_text(text);
 
@@ -242,7 +285,7 @@ void Application::draw_pause_overlay(){
         lineshift, textbox_padding
     );
 
-    shader_.setVec4("color", Colors::WhiteOpaque);
+    shader_.setVec4("color", Colors::WhiteHalfOpaque);
     quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
         build_ui_quad_model(0.0f,0.0f,kWindowWidth, kWindowHeight)
     );
@@ -266,27 +309,71 @@ void Application::draw_pause_overlay(){
     glEnable(GL_DEPTH_TEST);
 }
 
-void Application::update_startup(){
+void Application::draw_startup_menu(){
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    Color text_color = Colors::White;
+
+    /* shader_.setVec4("color", Colors::WhiteQuarterOpaque);
+    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
+        build_ui_quad_model(0.0f,0.0f,kWindowWidth, kWindowHeight)
+    ); */
+
+    logo_texture_.bind(0);
+    textured_shader_.setInt("logoTexture", 0);
+    float w = 842.0f * kWindowWidth / 1920.0f * 0.2f;
+    float h = 596.0f * kWindowHeight / 1080.0f * 0.2f;
+    float x = 0.0f - w * 0.2f;
+    float y = kWindowHeight - h;
+    glm::mat4 logo_model = build_ui_quad_model(x,y,w,h);
+    textured_quad_renderer_.draw(
+        textured_shader_, ui_projection_, glm::mat4(1.0f), logo_model
+    );
+
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
 }
 
-void Application::render_startup(){
-    
-}
-
-void Application::update(float delta_time) {
-    input_manager_.process_input(delta_time);
-}
-
-void Application::render() {
-    draw_scene();
-    if (!input_manager_.is_paused()) {
-        draw_hud();
-    } else {
-        draw_pause_overlay();
-    }       
+bool Application::check_resize(int& last_fb_width, int& last_fb_height){
+    int fb_width, fb_height;
+    glfwGetFramebufferSize(window_.get_handle(), &fb_width, &fb_height);
+    if (fb_width != last_fb_width || fb_height != last_fb_height){
+        last_fb_width = fb_width;
+        last_fb_height = fb_height;
+        return true;
+    }
+    return false;
 }
 
 bool Application::startup_finished(){
     return false;
 }
+
+void Application::update_startup(){
+
+}
+
+void Application::render_startup(){
+    clear_screen();
+    draw_startup_menu();
+}
+
+void Application::update_running(float delta_time) {
+    input_manager_.process_input(delta_time);
+    // Can add physics etc here if wanted/needed.
+}
+
+void Application::render_running() {
+    clear_screen();
+    draw_scene();
+    draw_hud();
+}
+
+void Application::render_paused(){
+    clear_screen();
+    draw_scene();
+    draw_pause_overlay();
+}
+

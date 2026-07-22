@@ -21,23 +21,16 @@ set(FT_DISABLE_BROTLI TRUE CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(freetype)
 
-add_library(glad STATIC 
-    ${CMAKE_SOURCE_DIR}/src/glad/glad.c
-    )
+add_library(glad STATIC src/glad/glad.c)
 
-target_include_directories(glad SYSTEM PUBLIC
-    ${CMAKE_SOURCE_DIR}/include
-)
+target_include_directories(glad SYSTEM PUBLIC include)
 
 add_library(tinyfiledialogs STATIC
-    ${CMAKE_SOURCE_DIR}/src/tinyfiledialogs/tinyfiledialogs.c
+    src/tinyfiledialogs/tinyfiledialogs.c
 )
-target_include_directories(tinyfiledialogs SYSTEM PUBLIC
-    ${CMAKE_SOURCE_DIR}/include
-)
-if (WIN32)
-    target_link_libraries(tinyfiledialogs PUBLIC comdlg32 ole32)
-endif()
+
+target_include_directories(tinyfiledialogs SYSTEM PUBLIC include)
+target_link_libraries(tinyfiledialogs PUBLIC comdlg32 ole32)
 
 add_executable (CathodeAutopsy 
     src/main.cpp
@@ -50,6 +43,9 @@ add_executable (CathodeAutopsy
     src/application.cpp
     src/mesh.cpp
     src/text_renderer.cpp
+    src/stb_image/stb_image.cpp
+    src/texture.cpp
+    src/paths.cpp
 )
 
 target_compile_options(CathodeAutopsy PRIVATE -Wall -Wextra -Wpedantic)
@@ -59,15 +55,27 @@ add_custom_command(TARGET CathodeAutopsy POST_BUILD
         ${CMAKE_SOURCE_DIR}/shaders
         $<TARGET_FILE_DIR:CathodeAutopsy>/shaders)
 
-target_include_directories(CathodeAutopsy PRIVATE 
-    ${CMAKE_SOURCE_DIR}/include
-)
+add_custom_command(TARGET CathodeAutopsy POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/shaders
+        $<TARGET_FILE_DIR:CathodeAutopsy>/shaders)
 
+add_custom_command(TARGET CathodeAutopsy POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/textures
+        $<TARGET_FILE_DIR:CathodeAutopsy>/textures)
+
+add_custom_command(TARGET CathodeAutopsy POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/fonts
+        $<TARGET_FILE_DIR:CathodeAutopsy>/fonts)
+
+target_include_directories(CathodeAutopsy PRIVATE include)
 target_include_directories(CathodeAutopsy SYSTEM PRIVATE
-    ${CMAKE_SOURCE_DIR}/lib/glfw-3.4.bin.WIN64/include
+    lib/glfw-3.4.bin.WIN64/include
 )
 target_link_directories(CathodeAutopsy PRIVATE 
-    ${CMAKE_SOURCE_DIR}/lib/glfw-3.4.bin.WIN64/lib-mingw-w64
+    lib/glfw-3.4.bin.WIN64/lib-mingw-w64
 )
 target_link_libraries(CathodeAutopsy PRIVATE
     glad
@@ -77,3 +85,5 @@ target_link_libraries(CathodeAutopsy PRIVATE
     freetype
     tinyfiledialogs
 )
+
+target_link_options(CathodeAutopsy PRIVATE -static-libgcc -static-libstdc++ -static)

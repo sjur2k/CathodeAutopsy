@@ -5,9 +5,21 @@
 #include <glm/glm.hpp>
 #include "shader.hpp"
 
+struct TexturedVertex {
+    glm::vec3 pos; 
+    glm::vec2 uv;
+};
+
 class Renderer {
     public:
-        Renderer(const std::vector<glm::vec3>& vertices, GLenum draw_mode = GL_POINTS);
+        Renderer(
+            const std::vector<glm::vec3>& vertices, 
+            GLenum draw_mode = GL_POINTS
+        );
+        Renderer(
+            const std::vector<TexturedVertex>& vertices, 
+            GLenum draw_mode = GL_TRIANGLES
+        );
         ~Renderer();
 
         Renderer(const Renderer&) = delete;

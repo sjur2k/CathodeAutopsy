@@ -18,6 +18,7 @@ Window::Window(int width, int height, const std::string& title) :
     }
 
     glfwMakeContextCurrent(window_);
+    glfwSwapInterval(1); // Enables V-sync
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         glfwTerminate();

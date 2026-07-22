@@ -1,4 +1,5 @@
 #include "text_renderer.hpp"
+#include "paths.hpp"
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include <iostream>
@@ -47,7 +48,10 @@ TextBlockLayout build_text_block(
 
 TextRenderer::TextRenderer(const std::string& font_path, unsigned int pixel_height,
                             int screen_width, int screen_height)
-    : shader_("shaders/text.vert", "shaders/text.frag")
+    : shader_(
+        paths::asset("shaders/text.vert").string().c_str(), 
+        paths::asset("shaders/text.frag").string().c_str()
+    )
 {
     set_screen_size(screen_width, screen_height);
 

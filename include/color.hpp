@@ -27,6 +27,7 @@ namespace Colors{
     inline constexpr Color Yellow      = { 1.00f, 1.00f, 0.00f};
 
     // Opaque colors
-    inline constexpr Color WhiteOpaque = { 1.00f, 1.00f, 1.00f, 0.50f};
+    inline constexpr Color WhiteHalfOpaque    = { 1.00f, 1.00f, 1.00f, 0.50f};
+    inline constexpr Color WhiteQuarterOpaque = { 1.00f, 1.00f, 1.00f, 0.25f};
 }
 

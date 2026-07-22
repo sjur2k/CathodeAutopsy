@@ -33,6 +33,7 @@ class InputManager {
         InputManager(GLFWwindow* window, Camera& camera);
         void process_input(float delta_time);
         bool is_paused() {return paused_;}
+        bool has_active_input() const;
         void set_paused(bool value) {paused_ = value;}
         void set_mode(InputMode mode) {mode_ = mode;}
         void set_active_page(UIPage page) {active_page_ = page;}

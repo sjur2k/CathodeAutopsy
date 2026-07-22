@@ -8,6 +8,7 @@
 
 #include "grid.hpp"
 #include "geometry.hpp"
+#include "paths.hpp"
 
 float hash2(int x, int y){
     uint32_t h = static_cast<uint32_t>(x * 374761393u + static_cast<uint32_t>(y * 668265263u));
@@ -82,7 +83,7 @@ void Grid::print_grid() {
 }
 
 void Grid::write_grid_to_PPM() {
-    std::ofstream out("data/grid.ppm", std::ios::binary);
+    std::ofstream out(paths::asset("data/grid.ppm").string().c_str(), std::ios::binary);
     float minVal = *min_element(grid_serialized_.begin(), grid_serialized_.end());
     float maxVal = *max_element(grid_serialized_.begin(), grid_serialized_.end());
     float range = (maxVal - minVal) > 1e-6f ? (maxVal - minVal) : 1.0f;
@@ -104,7 +105,7 @@ void Grid::write_grid_to_PPM() {
 }
 
 void Grid::write_grid_to_csv(float res){
-    std::ofstream out("data/grid.csv");
+    std::ofstream out(paths::asset("data/grid.csv").string().c_str());
     out <<"#"<<"rows"<<","<<rows_<<","<<"cols"<<","<<cols_<<","<<"resolution"<<","<<res<<"\n";
     out << "x,y,z\n";
     for (int j = 0; j < rows_; j++){

@@ -15,6 +15,24 @@ Renderer::Renderer(const std::vector<glm::vec3>& vertices, GLenum draw_mode)
     glBindVertexArray(0);
 }
 
+Renderer::Renderer(const std::vector<TexturedVertex>& vertices, GLenum draw_mode)
+    : vertex_count_(vertices.size()), draw_mode_(draw_mode) {
+    glGenVertexArrays(1, &VAO_);
+    glGenBuffers(1, &VBO_);
+
+    glBindVertexArray(VAO_);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(TexturedVertex), vertices.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedVertex), (void*)offsetof(TexturedVertex, pos));
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedVertex), (void*)offsetof(TexturedVertex, uv));
+    glEnableVertexAttribArray(1);
+    
+    glBindVertexArray(0);
+}
+
 Renderer::~Renderer() {
     glDeleteVertexArrays(1, &VAO_);
     glDeleteBuffers(1, &VBO_);
