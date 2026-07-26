@@ -4,4 +4,5 @@
 namespace paths {
     std::filesystem::path executable_dir();
     std::filesystem::path asset(const std::string& relative_path);
+    std::string extract_name(const std::string path);
 }

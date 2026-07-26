@@ -24,6 +24,7 @@ class Camera {
         
         Pose get_pose() const;
         void set_pose(const Pose& new_pose);
+        void set_aspect_ratio(float aspect_ratio){aspect_ratio_ = aspect_ratio;}
         void reset_pose();
         void print_pose();
         glm::mat4 get_view_matrix() const;

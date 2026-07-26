@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <optional>
 #include "camera.hpp"
+#include "glfw_context.hpp"
 
 enum class InputMode {
     Locked, // Flying camera mode
@@ -24,22 +25,26 @@ enum class UIPage {
 
 enum class UIAction {
     OpenFile,
-    Resume,
+    StartSimulation,
     // Add more actions if needed.
 };
 
 class InputManager {
     public:
-        InputManager(GLFWwindow* window, Camera& camera);
+        InputManager(GLFWwindow* window, Camera& camera, GLFWUserContext* context);
+        ~InputManager();
         void process_input(float delta_time);
         bool is_paused() {return paused_;}
         bool has_active_input() const;
         void set_paused(bool value) {paused_ = value;}
-        void set_mode(InputMode mode) {mode_ = mode;}
+        void set_mode(InputMode mode);
         void set_active_page(UIPage page) {active_page_ = page;}
         void set_button_box(UIPage page, UIAction action, UIBox box){
             page_buttons_[page][action] = box;
         }
+        void remove_button_box(UIPage page, UIAction action);
+        std::optional<UIAction> consume_triggered_action();
+
     private:
         GLFWwindow* window_;
         Camera& camera_;
@@ -47,6 +52,10 @@ class InputManager {
         std::unordered_map<UIPage, std::unordered_map<UIAction, UIBox>> page_buttons_;
         std::optional<UIAction> triggered_action_;
         UIPage active_page_ = UIPage::StartMenu;
+        GLFWcursor* arrow_cursor_ = nullptr;
+        GLFWcursor* hand_cursor_ = nullptr;
+        bool hovering_button_ = false;
+
         double last_x_ = 0.0;
         double last_y_ = 0.0;
         bool orbiting_ = false;
@@ -60,7 +69,7 @@ class InputManager {
         float mouse_sensitivity_ = 0.1f;
         float movement_speed_multiplier_ = 50.0f;
         
-        std::optional<UIAction> consume_triggered_action();
+        bool hit_test_active_page(double x, double y, UIAction& out_action) const;        
 
         void orbit(double xpos, double ypos);
 

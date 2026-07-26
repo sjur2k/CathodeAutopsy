@@ -1,13 +1,22 @@
 #include "input_manager.hpp"
+#include "glfw_context.hpp"
 #include "camera.hpp"
 
-InputManager::InputManager(GLFWwindow* window, Camera& camera) : window_(window), camera_(camera) {
-    glfwSetWindowUserPointer(window_, this);
+InputManager::InputManager(GLFWwindow* window, Camera& camera, GLFWUserContext* context) 
+    : window_(window), camera_(camera) {
+    context->input_manager = this;
     glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window_, mouse_callback);
     glfwSetMouseButtonCallback(window_, mouse_button_callback);
     glfwSetKeyCallback(window_, key_callback);
-    //glfwSetScrollCallback(window_, scroll_callback);
+    
+    arrow_cursor_ = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+    hand_cursor_ = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
+}
+
+InputManager::~InputManager(){
+    glfwDestroyCursor(arrow_cursor_);
+    glfwDestroyCursor(hand_cursor_);
 }
 
 void InputManager::process_input(float delta_time) {
@@ -63,6 +72,36 @@ bool InputManager::has_active_input() const {
         || glfwGetKey(window_, GLFW_KEY_SPACE) == GLFW_PRESS
         || glfwGetKey(window_, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
 }
+
+void InputManager::set_mode(InputMode mode){
+    mode_ = mode;
+    if (mode_ == InputMode::Interactive){
+        glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        hovering_button_ = false;
+        glfwSetCursor(window_, arrow_cursor_);
+    } else if (mode_ == InputMode::Locked){
+        glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    }
+}
+
+void InputManager::remove_button_box(UIPage page, UIAction action){
+    auto it = page_buttons_.find(page);
+    if (it == page_buttons_.end()) return;
+    it->second.erase(action);
+}
+
+bool InputManager::hit_test_active_page(double x, double y, UIAction& out_action) const{
+    auto it = page_buttons_.find(active_page_);
+    if (it == page_buttons_.end()) return false;
+    for (auto& [action_id, box] : it->second){
+        if (box.contains(x, y)){
+            out_action = action_id;
+            return true;
+        }
+    }
+    return false;
+}
+
 void InputManager::orbit(double xpos, double ypos) {
     if (first_mouse_) {
         last_x_ = xpos;
@@ -96,30 +135,51 @@ std::optional<UIAction> InputManager::consume_triggered_action(){
 }
 
 void InputManager::mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    InputManager* input_manager = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-    if (!input_manager) return;
+    auto* ctx = static_cast<GLFWUserContext*>(glfwGetWindowUserPointer(window));
+    if (!ctx || !ctx->input_manager) return;
+    InputManager* input_manager = ctx->input_manager;
     if (input_manager->orbiting_){
         input_manager->orbit(xpos, ypos);
-    }    
+        return;
+    }
+
+    if (input_manager->mode_ == InputMode::Interactive){
+        int win_height;
+        glfwGetWindowSize(window, nullptr, &win_height);
+        double flipped_y = win_height - ypos;
+
+        UIAction hit;
+        bool now_hovering = input_manager->hit_test_active_page(xpos, flipped_y, hit);
+
+        if (now_hovering != input_manager->hovering_button_){
+            input_manager->hovering_button_ = now_hovering;
+            glfwSetCursor(
+                window, 
+                now_hovering ? input_manager->hand_cursor_ : input_manager->arrow_cursor_
+            );
+        }
+    }
 }
 
 void InputManager::mouse_button_callback(GLFWwindow* window, int button, int action, int mods){
     (void)mods; // Suppress unused-variable-warnings
-    InputManager* input_manager = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-    if (!input_manager) return;
+    auto* ctx = static_cast<GLFWUserContext*>(glfwGetWindowUserPointer(window));
+    if (!ctx || !ctx->input_manager) return;
+    InputManager* input_manager = ctx->input_manager;
 
     // check different button actions
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS){
         if (input_manager->mode_ == InputMode::Interactive){
             double x,y;
             glfwGetCursorPos(window,&x,&y);
-            auto it = input_manager->page_buttons_.find(input_manager->active_page_);
-            if (it == input_manager->page_buttons_.end()) return;
-            for (auto& [action_id, box] : it->second){
-                if (box.contains(x,y)){
-                    input_manager->triggered_action_ = action_id;
-                    break;
-                }
+
+            int win_height;
+            glfwGetWindowSize(window, nullptr, &win_height);
+            double flipped_y = win_height - y;
+
+            UIAction hit;
+            if (input_manager->hit_test_active_page(x, flipped_y, hit)){
+                input_manager->triggered_action_ = hit;
             }
         } else if (input_manager->mode_ == InputMode::Locked){
             input_manager->orbiting_ = true;
@@ -141,8 +201,9 @@ void InputManager::mouse_button_callback(GLFWwindow* window, int button, int act
 
 void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
     (void)scancode; (void)mods; // Suppress unused-variable-warnings
-    InputManager* input_manager = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-    if(!input_manager) return;
+    auto* ctx = static_cast<GLFWUserContext*>(glfwGetWindowUserPointer(window));
+    if (!ctx || !ctx->input_manager) return;
+    InputManager* input_manager = ctx->input_manager;
 
     if(action == GLFW_PRESS){
         switch(key){
@@ -155,15 +216,16 @@ void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int a
             case GLFW_KEY_ESCAPE:
                 if (input_manager->is_paused()){
                     input_manager->set_paused(false); // UNPAUSE
-                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
                 } else {
                     input_manager->set_paused(true); // PAUSE
-                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                 }
+                break;
         }
     }
 }
 
 /* void InputManager::scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
-
+    auto* ctx = static_cast<GLFWUserContext*>(glfwGetWindowUserPointer(window));
+    if (!ctx || !ctx->input_manager) return;
+    InputManager* input_manager = ctx->input_manager;
 } */

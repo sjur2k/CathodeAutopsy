@@ -15,10 +15,11 @@ TextBlockLayout build_text_block(
     float total_height = 0.0f;
     float max_width = 0.0f;
     for (const auto& line : lines){
-        glm::vec2 d  = line.renderer->measure_text(line);
-        dims.push_back(d);
-        total_height += d.y;
-        max_width = std::max(max_width, d.x);
+        auto [width, ascent, descent] = line.renderer->measure_text(line);
+        float height = ascent - descent;
+        dims.push_back(glm::vec2(width, height));
+        total_height += height;
+        max_width = std::max(max_width, width);
     }
     total_height += line_spacing * static_cast<float>(lines.size()-1);
     float cursor_top = center_y + total_height * 0.5f;
@@ -125,23 +126,39 @@ void TextRenderer::set_screen_size(int width, int height) {
     projection_ = glm::ortho(0.0f, static_cast<float>(width),
                               0.0f, static_cast<float>(height));
 }
+glm::vec2 TextRenderer::center_text_in_box(
+    const std::string& text,
+    float scale,
+    float box_center_x, 
+    float box_center_y
+) const {
+    auto [width, ascent, descent] = measure_text(text, scale);
+    return glm::vec2(
+        box_center_x - width * 0.5f,
+        box_center_y - (ascent - descent) * 0.5f
+    );
+}
 
-glm::vec2 TextRenderer::measure_text(const std::string& text, float scale) const{
-    float width = 0.0f, max_top = 0.0f, max_bottom = 0.0f;
-    for (char c: text){
+std::tuple<float, float, float> TextRenderer::measure_text( 
+    const std::string& text, float scale
+) const {
+    float ascent = 0.0f;
+    float descent = 0.0f;
+    float width = 0.0f;
+    for (char c : text){
         auto it = glyphs_.find(c);
         if (it == glyphs_.end()) continue;
         const Glyph& g = it->second;
         width += (g.advance >> 6)*scale;
-        float top = g.bearing.y*scale;
-        float bottom = (g.size.y - g.bearing.y)*scale;
-        max_top = std::max(max_top, top);
-        max_bottom = std::max(max_bottom, bottom);
+        float top = g.bearing.y * scale;
+        float bottom = (g.size.y - g.bearing.y) * scale;
+        ascent = std::max(ascent, top);
+        descent = std::max(descent, bottom);
     }
-    return glm::vec2(width, max_top + max_bottom);
+    return std::make_tuple(width, ascent, descent);
 }
 
-glm::vec2 TextRenderer::measure_text(const TextLine& text) const{
+std::tuple<float,float,float> TextRenderer::measure_text(const TextLine& text) const{
     return measure_text(text.text, text.scale);
 }
 

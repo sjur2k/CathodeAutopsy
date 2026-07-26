@@ -19,6 +19,8 @@ struct TextLine{
         text(t), x(xy.x), y(xy.y), scale(s), color(c), renderer(r){}
     TextLine(std::string t, float x, float y, float s, Color c, TextRenderer* r = nullptr):
         text(t), x(x), y(y), scale(s), color(c), renderer(r){}
+    TextLine(std::string t, float s, Color c, TextRenderer* r = nullptr):
+        text(t), scale(s), color(c), renderer(r){}
 };
 
 struct TextBlockLayout {
@@ -45,8 +47,16 @@ class TextRenderer{
 
         void render_text(TextLine& text);
         void set_screen_size(int width, int height);
-        glm::vec2 measure_text(const std::string& text, float scale) const;
-        glm::vec2 measure_text(const TextLine& text) const;
+        
+        std::tuple<float,float,float> measure_text(const std::string& text, float scale) const;
+        std::tuple<float,float,float> measure_text(const TextLine& text) const;
+        glm::vec2 center_text_in_box(
+            const std::string& text,
+            float scale, 
+            float box_center_x, 
+            float box_center_y
+        ) const;
+
     private:
         struct Glyph{
             unsigned int texture_id;

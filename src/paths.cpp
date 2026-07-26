@@ -13,4 +13,7 @@ std::filesystem::path asset(const std::string& relative_path){
     return executable_dir() / relative_path;
 }
 
+std::string extract_name(const std::string path){
+    return std::filesystem::path(path).filename().string();
+}
 }

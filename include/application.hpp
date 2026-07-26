@@ -11,11 +11,19 @@
 #include "text_renderer.hpp"
 #include "geometry.hpp"
 #include "texture.hpp"
+#include "glfw_context.hpp"
 
 enum class AppState {
     Startup,
     Running,
     Paused
+};
+
+struct ButtonSpec {
+    float x,y,width,height,scale;
+    std::string label;
+    UIAction action;
+    bool enabled = true;
 };
 
 class Application {
@@ -24,6 +32,10 @@ public:
     void run();
 
 private:
+    int window_width_ = 1920;
+    int window_height_ = 1080;
+    
+    GLFWUserContext glfw_context_; // Must be declared before Window and InputManager
     Window window_;
     Camera camera_;
     Shader shader_;
@@ -38,10 +50,16 @@ private:
     InputManager input_manager_;
     Pose last_camera_pose_{};
     glm::mat4 ui_projection_;
+    AppState state_ = AppState::Startup;
     float last_frame_time_ = 0.0f;
     bool needs_redraw_ = true;
-    bool startup_finished();
+    bool file_loaded_ = false;
+    std::string loaded_file_path_;
+    std::string file_name_;
+    bool startup_finished_ = false;
     
+    UIBox draw_button(UIPage page, const ButtonSpec& spec);
+
     void clear_screen();
     void draw_scene();
     void draw_hud();

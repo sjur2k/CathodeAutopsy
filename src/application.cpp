@@ -12,8 +12,8 @@
 #include "tinyfiledialogs/tinyfiledialogs.h"
 
 namespace {
-    constexpr int kWindowWidth = 1920;
-    constexpr int kWindowHeight = 1080;
+    // Testing constants
+    constexpr float kGlobalFontScaling = 2.0f;
 
     // Assumed constants (SI-units)
     constexpr float kCellWidth = 10.0f;
@@ -24,6 +24,12 @@ namespace {
     constexpr float kGridWidth = kCellWidth / kResolution;
     constexpr float kGridLength = kCellLength / kResolution;
     constexpr float kPadding = 10.0f;
+    constexpr float kInitialWindowWidth = 1920.0f;
+    constexpr float kInitialWindowHeight = 1080.0f;
+    constexpr float kInitialAspect = kInitialWindowWidth / kInitialWindowHeight;
+    constexpr float kLogoNativeWidth = 842.0f;
+    constexpr float kLogoNativeHeight = 596.0f;
+    constexpr float kLogoAspect = kLogoNativeWidth / kLogoNativeHeight;
 
     // Camera parameters
     constexpr float kFieldOfView = 90.0f;
@@ -80,11 +86,12 @@ static glm::mat4 build_ui_quad_model(TextBlockLayout block){
 }
 
 Application::Application() : 
-    window_(kWindowWidth, kWindowHeight, "Cathode Visualization"), 
+    glfw_context_(),
+    window_(window_width_, window_height_, "Cathode Visualization", &glfw_context_), 
     camera_(
         Pose(Position(0.0f, 70.0f, 105.0f), Rotation(-60.0f, 90.0f, 0.0f)), // Looks down on grid defined in x-z plane
         kFieldOfView,
-        static_cast<float>(kWindowWidth) / static_cast<float>(kWindowHeight),
+        static_cast<float>(window_width_) / static_cast<float>(window_height_),
         kNearPlane,
         kFarPlane),
     shader_(
@@ -104,22 +111,42 @@ Application::Application() :
     textured_quad_renderer_(build_textured_unit_quad(), GL_TRIANGLES),
     display_text_renderer_(
         paths::asset("fonts/IvarDisplayHydro-Regular.ttf").string().c_str(), 
-        96, kWindowWidth, kWindowHeight
+        static_cast<int>(96*kGlobalFontScaling), window_width_, window_height_
     ),
     regular_text_renderer_(
         paths::asset("fonts/IvarTextHydro-Regular.ttf").string().c_str(), 
-        48, kWindowWidth, kWindowHeight
+        static_cast<int>(48*kGlobalFontScaling), window_width_, window_height_
     ),
-    input_manager_(window_.get_handle(), camera_)
+    input_manager_(window_.get_handle(), camera_, &glfw_context_)
 {
     glEnable(GL_DEPTH_TEST);
-    ui_projection_ = glm::ortho(0.0f, static_cast<float>(kWindowWidth), 
-                                0.0f, static_cast<float>(kWindowHeight));
+    
+    window_.set_resize_callback([this](int width, int height){
+        window_width_ = width;
+        window_height_ = height;
+        camera_.set_aspect_ratio(static_cast<float>(width) / static_cast<float>(height));
+        ui_projection_ = glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
+        display_text_renderer_.set_screen_size(width, height);
+        regular_text_renderer_.set_screen_size(width, height);
+        needs_redraw_ = true;
+    });
+    window_.set_refresh_callback([this](){
+        switch (state_){
+            case AppState::Startup: render_startup(); break;
+            case AppState::Running: render_running(); break;
+            case AppState::Paused: render_paused(); break;
+        }
+        window_.swap_buffers();
+    });
+    window_width_ = window_.width();
+    window_height_ = window_.height();
+    ui_projection_ = glm::ortho(0.0f, static_cast<float>(window_width_), 
+                                0.0f, static_cast<float>(window_height_));
+    display_text_renderer_.set_screen_size(window_width_, window_height_);
+    regular_text_renderer_.set_screen_size(window_width_, window_height_);
 }
 
 void Application::run() {
-    AppState state = AppState::Startup;
-    bool startup_rendered = false;
     input_manager_.set_active_page(UIPage::StartMenu);
     input_manager_.set_mode(InputMode::Interactive);
     int last_fb_width = 0, last_fb_height = 0;
@@ -127,21 +154,26 @@ void Application::run() {
     last_camera_pose_ = camera_.get_pose();
 
     while (!window_.should_close()) {
-        switch(state){
+        switch(state_){
             case AppState::Startup: {
-                if (startup_rendered){
+                if (!needs_redraw_){
                     glfwWaitEvents();
-                } else {
+                }
+
+                update_startup();
+
+                if (needs_redraw_){
                     render_startup();
                     window_.swap_buffers();
-                    startup_rendered = true;
+                    needs_redraw_ = false;
                 }
-                update_startup();
-                if (startup_finished()){
-                    state = AppState::Running;
+
+                if (startup_finished_){
+                    state_ = AppState::Running;
                     input_manager_.set_active_page(UIPage::None);
                     input_manager_.set_mode(InputMode::Locked);
                     last_frame_time_ = static_cast<float>(glfwGetTime());
+                    needs_redraw_ = true;
                 }
                 break;
             }
@@ -154,7 +186,7 @@ void Application::run() {
                 }
 
                 if (input_manager_.is_paused()){
-                    state = AppState::Paused;
+                    state_ = AppState::Paused;
                     input_manager_.set_active_page(UIPage::PauseMenu);
                     input_manager_.set_mode(InputMode::Interactive);
                     needs_redraw_ = true;
@@ -186,7 +218,7 @@ void Application::run() {
                 glfwWaitEvents();
 
                 if (!input_manager_.is_paused()){
-                    state = AppState::Running;
+                    state_ = AppState::Running;
                     input_manager_.set_active_page(UIPage::None);
                     input_manager_.set_mode(InputMode::Locked);
                     last_frame_time_ = static_cast<float>(glfwGetTime());
@@ -205,6 +237,34 @@ void Application::run() {
             }
         }
     }
+}
+
+UIBox Application::draw_button(UIPage page, const ButtonSpec& spec){
+    UIBox box{spec.x, spec.y, spec.width, spec.height};
+    
+    shader_.setVec4(
+        "color", 
+        spec.enabled ? Colors::WhiteHalfOpaque : Colors::WhiteQuarterOpaque
+    );
+    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f),
+        build_ui_quad_model(spec.x, spec.y, spec.width, spec.height)
+    );
+
+    Color label_color = spec.enabled ? Colors::White : Colors::WhiteHalfOpaque;
+    glm::vec2 label_pos = regular_text_renderer_.center_text_in_box(
+        spec.label, spec.scale,
+        spec.x + spec.width * 0.5f,
+        spec.y + spec.height * 0.5f
+    );
+    TextLine label(spec.label, label_pos, spec.scale, label_color);
+    regular_text_renderer_.render_text(label);
+
+    if (spec.enabled){
+        input_manager_.set_button_box(page, spec.action, box);
+    } else {
+        input_manager_.remove_button_box(page, spec.action);
+    }
+    return box;
 }
 
 void Application::clear_screen(){
@@ -233,17 +293,17 @@ void Application::draw_hud(){
     float textbox_padding = 10.0f;
 
     std::string msg = "For information, press ESC";
-    float text_scale = 0.4f;
-
-    glm::vec2 text_dims = regular_text_renderer_.measure_text(msg, text_scale);
-    glm::vec2 text_coords(textbox_padding, kWindowHeight - text_dims.y - textbox_padding);
+    float text_scale = 0.4f / kGlobalFontScaling;
+    auto [width, ascent, descent] = regular_text_renderer_.measure_text(msg, text_scale);
+    float height = ascent - descent;
+    glm::vec2 text_coords(textbox_padding, window_height_ - height - textbox_padding);
     TextLine text(msg, text_coords, text_scale, text_color);
 
     glm::mat4 textbox_model = build_ui_quad_model(
         0.0f,
-        kWindowHeight - text_dims.y - 2.0f * textbox_padding,
-        text_dims.x + 2 * textbox_padding,
-        text_dims.y + 2 * textbox_padding
+        window_height_ - height - 2.0f * textbox_padding,
+        width + 2 * textbox_padding,
+        height + 2 * textbox_padding
     );
 
     shader_.setVec4("color", Colors::Background);
@@ -267,27 +327,27 @@ void Application::draw_pause_overlay(){
     
     TextBlockLayout top_block = build_text_block(
         {
-            TextLine("PAUSED", 0.0f, 0.0f, 1.0f, text_color, &display_text_renderer_),
-            TextLine("Press ESC to resume", 0.0f, 0.0f, 0.8f, text_color, &regular_text_renderer_),
+            TextLine("PAUSED", 0.0f, 0.0f, 1.0f / kGlobalFontScaling, text_color, &display_text_renderer_),
+            TextLine("Press ESC to resume", 0.0f, 0.0f, 0.8f / kGlobalFontScaling, text_color, &regular_text_renderer_),
         },
-        kWindowWidth * 0.5f, kWindowHeight * 0.85f,
+        window_width_ * 0.5f, window_height_ * 0.85f,
         lineshift, textbox_padding
     );
 
     TextBlockLayout bottom_block = build_text_block(
         {
-            TextLine("Controls", 0.0f, 0.0f, 0.8f, text_color, &display_text_renderer_),
-            TextLine("W/A/S/D: Horizontal Movement", 0.0f, 0.0f, 0.6f, text_color, &regular_text_renderer_),
-            TextLine("LSHIFT/SPACE: Vertical Movement", 0.0f, 0.0f, 0.6f, text_color, &regular_text_renderer_),
-            TextLine("MOUSE1 (HOLD): Pan", 0.0f, 0.0f, 0.6f, text_color, &regular_text_renderer_)
+            TextLine("Controls", 0.0f, 0.0f, 0.8f/ kGlobalFontScaling, text_color, &display_text_renderer_),
+            TextLine("W/A/S/D: Horizontal Movement", 0.0f, 0.0f, 0.6f/ kGlobalFontScaling, text_color, &regular_text_renderer_),
+            TextLine("LSHIFT/SPACE: Vertical Movement", 0.0f, 0.0f, 0.6f/ kGlobalFontScaling, text_color, &regular_text_renderer_),
+            TextLine("MOUSE1 (HOLD): Pan", 0.0f, 0.0f, 0.6f/ kGlobalFontScaling, text_color, &regular_text_renderer_)
         },
-        kWindowWidth * 0.5f, kWindowHeight * 0.5f,
+        window_width_ * 0.5f, window_height_ * 0.5f,
         lineshift, textbox_padding
     );
 
     shader_.setVec4("color", Colors::WhiteHalfOpaque);
     quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
-        build_ui_quad_model(0.0f,0.0f,kWindowWidth, kWindowHeight)
+        build_ui_quad_model(0.0f,0.0f,window_width_, window_height_)
     );
     
     shader_.setVec4("color", Colors::Background);
@@ -314,23 +374,77 @@ void Application::draw_startup_menu(){
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    Color text_color = Colors::White;
-
-    /* shader_.setVec4("color", Colors::WhiteQuarterOpaque);
-    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
-        build_ui_quad_model(0.0f,0.0f,kWindowWidth, kWindowHeight)
-    ); */
-
+    float x_scale = window_width_ / kInitialWindowWidth;
+    float y_scale = window_height_ / kInitialWindowHeight;
+    float ui_scale = std::min(x_scale, y_scale);
+    
+    // Logo
     logo_texture_.bind(0);
     textured_shader_.setInt("logoTexture", 0);
-    float w = 842.0f * kWindowWidth / 1920.0f * 0.2f;
-    float h = 596.0f * kWindowHeight / 1080.0f * 0.2f;
-    float x = 0.0f - w * 0.2f;
-    float y = kWindowHeight - h;
-    glm::mat4 logo_model = build_ui_quad_model(x,y,w,h);
+    float logo_w = std::min(window_width_ * ui_scale * 0.2f, kInitialWindowWidth * 0.4f);
+    float logo_h = logo_w / kLogoAspect;
+    float logo_x = - logo_w * 0.1f;
+    float logo_y = window_height_ - logo_h;
+    glm::mat4 logo_model = build_ui_quad_model(logo_x, logo_y, logo_w, logo_h);
     textured_quad_renderer_.draw(
         textured_shader_, ui_projection_, glm::mat4(1.0f), logo_model
     );
+
+    // Text
+    Color text_color = Colors::White;
+    float textbox_padding = 20.0f * ui_scale;
+    float lineshift = 40.0f * ui_scale;
+    float textbox_x = window_width_ * 0.5f;
+    float textbox_y = window_height_ * 0.6f;
+    float line1_scale = 0.8f * ui_scale/ kGlobalFontScaling;
+    float line2_scale = 0.4f * ui_scale/ kGlobalFontScaling;
+
+    TextBlockLayout title_block = build_text_block(
+        { // Make lines without defining x and y. This is done below
+            TextLine("REMOTE CATHODE AUTOPSY PROJECT", line1_scale, text_color, &display_text_renderer_),
+            TextLine("An interactive 3D point cloud visualization tool", line2_scale, text_color, &display_text_renderer_)
+        },
+        textbox_x, textbox_y,
+        lineshift, textbox_padding
+    );
+
+    for (auto& text : title_block.texts){
+        text.renderer->render_text(text);
+    }
+
+    // File upload target
+    float upload_w = 400.0f * x_scale;
+    float upload_h = 70.0f * y_scale;
+    float upload_x = window_width_ * 0.5f - upload_w * 0.5f;
+    float upload_y = window_height_ * 0.35f;
+    float upload_scale = 0.6f * ui_scale/ kGlobalFontScaling;
+    std::string upload_label = file_loaded_ ? file_name_ : "Select CSV file";
+
+    if (file_loaded_){
+        float file_name_width = std::get<0>(
+            regular_text_renderer_.measure_text(file_name_, upload_scale)
+        );
+        if (file_name_width > upload_w){
+            upload_w = file_name_width + 30.0f;
+        }
+    }
+
+    draw_button(UIPage::StartMenu, ButtonSpec{
+        upload_x, upload_y, upload_w, upload_h, upload_scale,
+        upload_label, UIAction::OpenFile, true // upload target is always clickable
+    });
+
+    // Simulation button
+    float button_w = 300.0f * x_scale;
+    float button_h = 50.0f * y_scale;
+    float button_x = window_width_ * 0.5f - button_w * 0.5f;
+    float button_y = upload_y - button_h - 20.0f;
+    float button_scale = 0.5f * ui_scale/ kGlobalFontScaling;
+
+    draw_button(UIPage::StartMenu, ButtonSpec{
+        button_x, button_y, button_w, button_h, button_scale,
+        "Start simulation", UIAction::StartSimulation, file_loaded_
+    });
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
@@ -347,12 +461,22 @@ bool Application::check_resize(int& last_fb_width, int& last_fb_height){
     return false;
 }
 
-bool Application::startup_finished(){
-    return false;
-}
-
 void Application::update_startup(){
-
+    if (auto action = input_manager_.consume_triggered_action()){
+        if (*action == UIAction::OpenFile){
+            const char* filter[] = {"*.csv"};
+            const char* path = tinyfd_openFileDialog("Select a point cloud file","", 1, filter, "CSV files", 0);
+            if (path){
+                loaded_file_path_ = path;
+                file_name_ = paths::extract_name(loaded_file_path_);
+                file_loaded_ = true;
+            }
+            last_frame_time_ = static_cast<float>(glfwGetTime());
+            needs_redraw_ = true;
+        } else if (*action == UIAction::StartSimulation){
+            startup_finished_ = true;
+        }
+    }
 }
 
 void Application::render_startup(){
