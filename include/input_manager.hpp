@@ -26,6 +26,10 @@ enum class UIPage {
 enum class UIAction {
     OpenFile,
     StartSimulation,
+    ShowInfo,
+    HideInfo,
+    ToggleUseFileData,
+    NoAction,
     // Add more actions if needed.
 };
 

@@ -21,6 +21,8 @@ enum class AppState {
 
 struct ButtonSpec {
     float x,y,width,height,scale;
+    std::optional<Color> box_color;
+    std::optional<Color> label_color;
     std::string label;
     UIAction action;
     bool enabled = true;
@@ -52,8 +54,11 @@ private:
     glm::mat4 ui_projection_;
     AppState state_ = AppState::Startup;
     float last_frame_time_ = 0.0f;
+    bool display_info_ = false;
     bool needs_redraw_ = true;
     bool file_loaded_ = false;
+    bool simulation_btn_active_ = false;
+    bool use_file_data_ = true;
     std::string loaded_file_path_;
     std::string file_name_;
     bool startup_finished_ = false;

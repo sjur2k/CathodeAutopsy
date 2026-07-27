@@ -12,9 +12,6 @@
 #include "tinyfiledialogs/tinyfiledialogs.h"
 
 namespace {
-    // Testing constants
-    constexpr float kGlobalFontScaling = 2.0f;
-
     // Assumed constants (SI-units)
     constexpr float kCellWidth = 10.0f;
     constexpr float kCellLength = 4.0f;
@@ -111,11 +108,11 @@ Application::Application() :
     textured_quad_renderer_(build_textured_unit_quad(), GL_TRIANGLES),
     display_text_renderer_(
         paths::asset("fonts/IvarDisplayHydro-Regular.ttf").string().c_str(), 
-        static_cast<int>(96*kGlobalFontScaling), window_width_, window_height_
+        static_cast<int>(192), window_width_, window_height_
     ),
     regular_text_renderer_(
         paths::asset("fonts/IvarTextHydro-Regular.ttf").string().c_str(), 
-        static_cast<int>(48*kGlobalFontScaling), window_width_, window_height_
+        static_cast<int>(96), window_width_, window_height_
     ),
     input_manager_(window_.get_handle(), camera_, &glfw_context_)
 {
@@ -241,16 +238,24 @@ void Application::run() {
 
 UIBox Application::draw_button(UIPage page, const ButtonSpec& spec){
     UIBox box{spec.x, spec.y, spec.width, spec.height};
-    
-    shader_.setVec4(
-        "color", 
-        spec.enabled ? Colors::WhiteHalfOpaque : Colors::WhiteQuarterOpaque
-    );
+    Color box_color, label_color;
+    if(spec.box_color.has_value()){
+        box_color = spec.box_color.value();
+    } else {
+        box_color = spec.enabled ? Colors::WhiteHalfOpaque : Colors::WhiteQuarterOpaque;
+    }
+    if(spec.label_color.has_value()){
+        label_color = spec.label_color.value();
+    } else {
+        label_color = spec.enabled ? Colors::White : Colors::WhiteHalfOpaque;
+    }
+
+    shader_.setVec4("color", box_color);
+
     quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f),
         build_ui_quad_model(spec.x, spec.y, spec.width, spec.height)
     );
 
-    Color label_color = spec.enabled ? Colors::White : Colors::WhiteHalfOpaque;
     glm::vec2 label_pos = regular_text_renderer_.center_text_in_box(
         spec.label, spec.scale,
         spec.x + spec.width * 0.5f,
@@ -293,7 +298,7 @@ void Application::draw_hud(){
     float textbox_padding = 10.0f;
 
     std::string msg = "For information, press ESC";
-    float text_scale = 0.4f / kGlobalFontScaling;
+    float text_scale = 0.2f;
     auto [width, ascent, descent] = regular_text_renderer_.measure_text(msg, text_scale);
     float height = ascent - descent;
     glm::vec2 text_coords(textbox_padding, window_height_ - height - textbox_padding);
@@ -327,8 +332,8 @@ void Application::draw_pause_overlay(){
     
     TextBlockLayout top_block = build_text_block(
         {
-            TextLine("PAUSED", 0.0f, 0.0f, 1.0f / kGlobalFontScaling, text_color, &display_text_renderer_),
-            TextLine("Press ESC to resume", 0.0f, 0.0f, 0.8f / kGlobalFontScaling, text_color, &regular_text_renderer_),
+            TextLine("PAUSED", 0.0f, 0.0f, 0.5f, text_color, &display_text_renderer_),
+            TextLine("Press ESC to resume", 0.0f, 0.0f, 0.4f, text_color, &regular_text_renderer_),
         },
         window_width_ * 0.5f, window_height_ * 0.85f,
         lineshift, textbox_padding
@@ -336,10 +341,10 @@ void Application::draw_pause_overlay(){
 
     TextBlockLayout bottom_block = build_text_block(
         {
-            TextLine("Controls", 0.0f, 0.0f, 0.8f/ kGlobalFontScaling, text_color, &display_text_renderer_),
-            TextLine("W/A/S/D: Horizontal Movement", 0.0f, 0.0f, 0.6f/ kGlobalFontScaling, text_color, &regular_text_renderer_),
-            TextLine("LSHIFT/SPACE: Vertical Movement", 0.0f, 0.0f, 0.6f/ kGlobalFontScaling, text_color, &regular_text_renderer_),
-            TextLine("MOUSE1 (HOLD): Pan", 0.0f, 0.0f, 0.6f/ kGlobalFontScaling, text_color, &regular_text_renderer_)
+            TextLine("Controls", 0.0f, 0.0f, 0.4f, text_color, &display_text_renderer_),
+            TextLine("W/A/S/D: Horizontal Movement", 0.0f, 0.0f, 0.3f, text_color, &regular_text_renderer_),
+            TextLine("LSHIFT/SPACE: Vertical Movement", 0.0f, 0.0f, 0.3f, text_color, &regular_text_renderer_),
+            TextLine("MOUSE1 (HOLD): Pan", 0.0f, 0.0f, 0.6f, text_color, &regular_text_renderer_)
         },
         window_width_ * 0.5f, window_height_ * 0.5f,
         lineshift, textbox_padding
@@ -396,8 +401,8 @@ void Application::draw_startup_menu(){
     float lineshift = 40.0f * ui_scale;
     float textbox_x = window_width_ * 0.5f;
     float textbox_y = window_height_ * 0.6f;
-    float line1_scale = 0.8f * ui_scale/ kGlobalFontScaling;
-    float line2_scale = 0.4f * ui_scale/ kGlobalFontScaling;
+    float line1_scale = 0.4f * ui_scale;
+    float line2_scale = 0.3f * ui_scale;
 
     TextBlockLayout title_block = build_text_block(
         { // Make lines without defining x and y. This is done below
@@ -417,7 +422,7 @@ void Application::draw_startup_menu(){
     float upload_h = 70.0f * y_scale;
     float upload_x = window_width_ * 0.5f - upload_w * 0.5f;
     float upload_y = window_height_ * 0.35f;
-    float upload_scale = 0.6f * ui_scale/ kGlobalFontScaling;
+    float upload_scale = 0.3f * ui_scale;
     std::string upload_label = file_loaded_ ? file_name_ : "Select CSV file";
 
     if (file_loaded_){
@@ -425,26 +430,139 @@ void Application::draw_startup_menu(){
             regular_text_renderer_.measure_text(file_name_, upload_scale)
         );
         if (file_name_width > upload_w){
+            upload_x += upload_w * 0.5f;
             upload_w = file_name_width + 30.0f;
+            upload_x -= upload_w * 0.5f;
         }
     }
-
-    draw_button(UIPage::StartMenu, ButtonSpec{
-        upload_x, upload_y, upload_w, upload_h, upload_scale,
-        upload_label, UIAction::OpenFile, true // upload target is always clickable
-    });
+    ButtonSpec upload_btn_spec{
+        .x = upload_x, 
+        .y = upload_y, 
+        .width = upload_w, 
+        .height = upload_h, 
+        .scale = upload_scale,
+        .box_color = std::nullopt,
+        .label_color = std::nullopt,
+        .label = file_loaded_ ? file_name_ : "Select CSV file",
+        .action = UIAction::OpenFile,
+        .enabled = !display_info_
+    };
+    draw_button(UIPage::StartMenu, upload_btn_spec);
 
     // Simulation button
-    float button_w = 300.0f * x_scale;
+    float button_w = 400.0f * x_scale;
     float button_h = 50.0f * y_scale;
-    float button_x = window_width_ * 0.5f - button_w * 0.5f;
-    float button_y = upload_y - button_h - 20.0f;
-    float button_scale = 0.5f * ui_scale/ kGlobalFontScaling;
 
-    draw_button(UIPage::StartMenu, ButtonSpec{
-        button_x, button_y, button_w, button_h, button_scale,
-        "Start simulation", UIAction::StartSimulation, file_loaded_
-    });
+    ButtonSpec sim_btn_spec{
+        .x = window_width_ * 0.5f - button_w * 0.5f,
+        .y = upload_y - button_h - 20.0f,
+        .width = button_w,
+        .height = button_h,
+        .scale = 0.25f * ui_scale,
+        .box_color = std::nullopt,
+        .label_color = std::nullopt,
+        .label = "Start simulation",
+        .action = UIAction::StartSimulation,
+        .enabled = file_loaded_ && !display_info_
+    };
+    draw_button(UIPage::StartMenu, sim_btn_spec);
+    
+    // Checkbox text (no button functionality)
+    ButtonSpec sim_type_btn_1{
+        .x = window_width_ * 0.5f - button_w * 0.5f,
+        .y = upload_y - 2.0f*(button_h + 20.0f),
+        .width = button_w,
+        .height = button_h,
+        .scale = 0.25 * ui_scale,
+        .box_color = std::nullopt,
+        .label_color = std::nullopt,
+        .label = "Use pseudo-random example data:",
+        .action = UIAction::NoAction,
+        .enabled = false
+    };
+    draw_button(UIPage::StartMenu, sim_type_btn_1);
+
+    // Checkbox (should use generated data or not)
+    ButtonSpec sim_type_btn_2{
+        .x = window_width_ * 0.5f + button_w * 0.5f + 10.0f,
+        .y = upload_y - 2.0f*(button_h + 20.0f),
+        .width = button_h,
+        .height = button_h,
+        .scale = 0.4f * ui_scale,
+        .box_color = std::nullopt,
+        .label_color = Colors::Background,
+        .label = use_file_data_ ? "" : "X",
+        .action = UIAction::ToggleUseFileData,
+        .enabled = !display_info_
+    };
+    draw_button(UIPage::StartMenu, sim_type_btn_2);
+    
+    // Info tab button
+    button_w = 200.0f * x_scale;
+    ButtonSpec info_btn_spec{
+        .x = window_width_ * 0.5f - button_w * 0.5f,
+        .y = upload_y - 3.0f * (button_h + 20.0f),
+        .width = button_w,
+        .height = button_h,
+        .scale = 0.25f * ui_scale,
+        .box_color = std::nullopt,
+        .label_color = std::nullopt,
+        .label = "Show info",
+        .action = UIAction::ShowInfo,
+        .enabled = !display_info_
+    };
+    draw_button(UIPage::StartMenu, info_btn_spec);
+
+    // Info tab
+    float info_w = window_width_ * 0.4f;
+    float info_h = window_height_ * 0.4f;
+    float info_x = window_width_ * 0.5f;
+    float info_y = window_height_ * 0.5f;
+    float info_title_scale = 0.4f * ui_scale;
+    float info_text_scale = 0.3f * ui_scale;
+
+    text_color = Colors::Background;
+    TextBlockLayout info_block = build_text_block(
+        {
+            TextLine("Info", info_title_scale, text_color, &display_text_renderer_),
+            TextLine("Expected CSV format:", info_text_scale, text_color, &regular_text_renderer_),
+            TextLine("Line 1: \"x, y, z\"", info_text_scale, text_color, &regular_text_renderer_),
+            TextLine("Lines 2,3,..: \"data", info_text_scale, text_color, &regular_text_renderer_)
+        },
+        info_x, info_y,
+        lineshift, textbox_padding
+    );
+
+    if (display_info_){
+        shader_.setVec4("color", Colors::WhiteHalfOpaque);
+        quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
+            build_ui_quad_model(0.0f,0.0f,window_width_, window_height_)
+        );
+        shader_.setVec4("color", Colors::White);
+        quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
+            build_ui_quad_model(
+                info_x - info_w * 0.5f,
+                info_y - info_h * 0.5f,
+                info_w, info_h)
+        );
+        for (auto& text : info_block.texts){
+            regular_text_renderer_.render_text(text);
+        }
+
+        float button_h = 50.0f * ui_scale; //Square
+        ButtonSpec close_info_btn_spec{
+            .x = info_x + 0.5f * info_w - button_h - 10.0f,
+            .y = info_y + 0.5f * info_h - button_h - 10.0f,
+            .width = button_h, .height = button_h,
+            .scale = 0.4f * ui_scale,
+            .box_color = Colors::Background, 
+            .label_color = Colors::White,
+            .label = "X",
+            .action = UIAction::HideInfo,
+            .enabled = true
+        };
+        draw_button(UIPage::StartMenu, close_info_btn_spec);
+    }
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
@@ -463,7 +581,9 @@ bool Application::check_resize(int& last_fb_width, int& last_fb_height){
 
 void Application::update_startup(){
     if (auto action = input_manager_.consume_triggered_action()){
-        if (*action == UIAction::OpenFile){
+        switch (*action)
+        {
+        case UIAction::OpenFile: {
             const char* filter[] = {"*.csv"};
             const char* path = tinyfd_openFileDialog("Select a point cloud file","", 1, filter, "CSV files", 0);
             if (path){
@@ -473,8 +593,35 @@ void Application::update_startup(){
             }
             last_frame_time_ = static_cast<float>(glfwGetTime());
             needs_redraw_ = true;
-        } else if (*action == UIAction::StartSimulation){
+            break;
+        }
+        case UIAction::StartSimulation:
             startup_finished_ = true;
+            if (file_loaded_ && use_file_data_){
+                point_cloud_renderer_.update_vertices(
+                    point_cloud_renderer_.load_CSV(loaded_file_path_)
+                );
+            }
+            break;
+
+        case UIAction::ShowInfo:
+            display_info_ = true;
+            needs_redraw_ = true;
+            break;
+
+        case UIAction::HideInfo:
+            display_info_ = false;
+            needs_redraw_ = true;
+            break;
+        
+        case UIAction::ToggleUseFileData:
+            use_file_data_ = !use_file_data_;
+            simulation_btn_active_ = true;
+            needs_redraw_ = true;
+            break;
+
+        default:
+            break;
         }
     }
 }
@@ -486,7 +633,6 @@ void Application::render_startup(){
 
 void Application::update_running(float delta_time) {
     input_manager_.process_input(delta_time);
-    // Can add physics etc here if wanted/needed.
 }
 
 void Application::render_running() {
