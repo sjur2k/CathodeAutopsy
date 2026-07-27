@@ -24,24 +24,28 @@ enum class UIPage {
 };
 
 enum class UIAction {
+    NoAction,
     OpenFile,
     StartSimulation,
     ShowInfo,
     HideInfo,
     ToggleUseFileData,
-    NoAction,
+    ToggleFullscreen,
+    GoToMainMenu,
     // Add more actions if needed.
 };
 
 class InputManager {
     public:
-        InputManager(GLFWwindow* window, Camera& camera, GLFWUserContext* context);
+        InputManager(Window& window, Camera& camera, GLFWUserContext* context);
         ~InputManager();
         void process_input(float delta_time);
         bool is_paused() {return paused_;}
         bool has_active_input() const;
         void set_paused(bool value) {paused_ = value;}
+        void toggle_fullscreen();
         void set_mode(InputMode mode);
+        UIPage get_active_page() {return active_page_;}
         void set_active_page(UIPage page) {active_page_ = page;}
         void set_button_box(UIPage page, UIAction action, UIBox box){
             page_buttons_[page][action] = box;
@@ -50,7 +54,7 @@ class InputManager {
         std::optional<UIAction> consume_triggered_action();
 
     private:
-        GLFWwindow* window_;
+        Window& window_;
         Camera& camera_;
         InputMode mode_ = InputMode::Locked;
         std::unordered_map<UIPage, std::unordered_map<UIAction, UIBox>> page_buttons_;

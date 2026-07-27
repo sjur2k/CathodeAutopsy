@@ -20,9 +20,11 @@ enum class AppState {
 };
 
 struct ButtonSpec {
-    float x,y,width,height,scale;
+    UIBox box;
+    float scale;
     std::optional<Color> box_color;
     std::optional<Color> label_color;
+    Texture* label_texture = nullptr;
     std::string label;
     UIAction action;
     bool enabled = true;
@@ -43,6 +45,7 @@ private:
     Shader shader_;
     Shader textured_shader_;
     Texture logo_texture_;
+    Texture close_btn_texture_;
     Grid grid_;
     Renderer point_cloud_renderer_;
     Renderer quad_renderer_;
@@ -63,7 +66,7 @@ private:
     std::string file_name_;
     bool startup_finished_ = false;
     
-    UIBox draw_button(UIPage page, const ButtonSpec& spec);
+    void draw_button(UIPage page, const ButtonSpec& spec);
 
     void clear_screen();
     void draw_scene();
@@ -78,5 +81,6 @@ private:
     void update_running(float delta_time);
     void render_running();
 
+    void update_paused();
     void render_paused();
 };

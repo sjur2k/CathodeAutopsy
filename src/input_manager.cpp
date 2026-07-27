@@ -1,14 +1,17 @@
-#include "input_manager.hpp"
+#include <iostream>
 #include "glfw_context.hpp"
 #include "camera.hpp"
+#include "window.hpp"
+#include "input_manager.hpp"
 
-InputManager::InputManager(GLFWwindow* window, Camera& camera, GLFWUserContext* context) 
+InputManager::InputManager(Window& window, Camera& camera, GLFWUserContext* context) 
     : window_(window), camera_(camera) {
     context->input_manager = this;
-    glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetCursorPosCallback(window_, mouse_callback);
-    glfwSetMouseButtonCallback(window_, mouse_button_callback);
-    glfwSetKeyCallback(window_, key_callback);
+    GLFWwindow* window_handle = window_.get_handle();
+    glfwSetInputMode(window_handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window_handle, mouse_callback);
+    glfwSetMouseButtonCallback(window_handle, mouse_button_callback);
+    glfwSetKeyCallback(window_handle, key_callback);
     
     arrow_cursor_ = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
     hand_cursor_ = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
@@ -39,23 +42,24 @@ void InputManager::process_input(float delta_time) {
     );
 
     Position unit_up(0.0f,1.0f,0.0f);
-    
-    if (glfwGetKey(window_, GLFW_KEY_W) == GLFW_PRESS){
+
+    GLFWwindow* window_handle = window_.get_handle();
+    if (glfwGetKey(window_handle, GLFW_KEY_W) == GLFW_PRESS){
         current_pose.position += unit_forward*velocity;
     }
-    if (glfwGetKey(window_, GLFW_KEY_A) == GLFW_PRESS){
+    if (glfwGetKey(window_handle, GLFW_KEY_A) == GLFW_PRESS){
         current_pose.position -= unit_right*velocity;
     }
-    if (glfwGetKey(window_, GLFW_KEY_S) == GLFW_PRESS){
+    if (glfwGetKey(window_handle, GLFW_KEY_S) == GLFW_PRESS){
         current_pose.position -= unit_forward*velocity;
     }
-    if (glfwGetKey(window_, GLFW_KEY_D) == GLFW_PRESS){
+    if (glfwGetKey(window_handle, GLFW_KEY_D) == GLFW_PRESS){
         current_pose.position += unit_right*velocity;
     }
-    if (glfwGetKey(window_, GLFW_KEY_SPACE) == GLFW_PRESS){
+    if (glfwGetKey(window_handle, GLFW_KEY_SPACE) == GLFW_PRESS){
         current_pose.position += unit_up*velocity;
     }
-    if (glfwGetKey(window_, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+    if (glfwGetKey(window_handle, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
         if (current_pose.position.y > 1){
             current_pose.position -= unit_up*velocity;
         }
@@ -65,22 +69,28 @@ void InputManager::process_input(float delta_time) {
 
 bool InputManager::has_active_input() const {
     if (orbiting_) return true;
-    return glfwGetKey(window_, GLFW_KEY_W) == GLFW_PRESS
-        || glfwGetKey(window_, GLFW_KEY_A) == GLFW_PRESS
-        || glfwGetKey(window_, GLFW_KEY_S) == GLFW_PRESS
-        || glfwGetKey(window_, GLFW_KEY_D) == GLFW_PRESS
-        || glfwGetKey(window_, GLFW_KEY_SPACE) == GLFW_PRESS
-        || glfwGetKey(window_, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+    GLFWwindow* window_handle = window_.get_handle();
+    return glfwGetKey(window_handle, GLFW_KEY_W) == GLFW_PRESS
+        || glfwGetKey(window_handle, GLFW_KEY_A) == GLFW_PRESS
+        || glfwGetKey(window_handle, GLFW_KEY_S) == GLFW_PRESS
+        || glfwGetKey(window_handle, GLFW_KEY_D) == GLFW_PRESS
+        || glfwGetKey(window_handle, GLFW_KEY_SPACE) == GLFW_PRESS
+        || glfwGetKey(window_handle, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+}
+
+void InputManager::toggle_fullscreen(){
+    window_.toggle_fullscreen();
 }
 
 void InputManager::set_mode(InputMode mode){
+    GLFWwindow* window_handle = window_.get_handle();
     mode_ = mode;
     if (mode_ == InputMode::Interactive){
-        glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwSetInputMode(window_handle, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         hovering_button_ = false;
-        glfwSetCursor(window_, arrow_cursor_);
+        glfwSetCursor(window_handle, arrow_cursor_);
     } else if (mode_ == InputMode::Locked){
-        glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetInputMode(window_handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
 }
 
@@ -201,26 +211,39 @@ void InputManager::mouse_button_callback(GLFWwindow* window, int button, int act
 
 void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
     (void)scancode; (void)mods; // Suppress unused-variable-warnings
+    if(action != GLFW_PRESS) return;
     auto* ctx = static_cast<GLFWUserContext*>(glfwGetWindowUserPointer(window));
-    if (!ctx || !ctx->input_manager) return;
+    if (!ctx || !ctx->input_manager || !ctx->window) return;
     InputManager* input_manager = ctx->input_manager;
+    // Window* active_window = ctx->window;
 
-    if(action == GLFW_PRESS){
-        switch(key){
-            case GLFW_KEY_T:
-                input_manager->camera_.print_pose();
-                break;
-            case GLFW_KEY_Q:
-                glfwSetWindowShouldClose(window, true);
-                break;
-            case GLFW_KEY_ESCAPE:
-                if (input_manager->is_paused()){
-                    input_manager->set_paused(false); // UNPAUSE
-                } else {
-                    input_manager->set_paused(true); // PAUSE
-                }
-                break;
+    switch(key)
+    {
+    case GLFW_KEY_T:
+        input_manager->camera_.print_pose();
+        break;
+    case GLFW_KEY_Q:
+        glfwSetWindowShouldClose(window, true);
+        break;
+    case GLFW_KEY_ESCAPE:{
+        UIPage page = input_manager->get_active_page();
+        if (page == UIPage::None || page == UIPage::PauseMenu){
+            input_manager->set_paused(!input_manager->is_paused());
+        } else if (page == UIPage::StartMenu){
+            /* if (active_window->is_maximized()){
+                input_manager->toggle_fullscreen();
+                std::cout<<"exiting fullscreen"<<std::endl; // TODO: remove
+            } */
+           void();
         }
+        break;
+    }
+    case GLFW_KEY_F11:
+        input_manager->toggle_fullscreen();
+        break;
+    
+    default:
+        break;
     }
 }
 

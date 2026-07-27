@@ -82,6 +82,10 @@ static glm::mat4 build_ui_quad_model(TextBlockLayout block){
     return build_ui_quad_model(block.box_x, block.box_y, block.box_width, block.box_height);
 }
 
+static glm::mat4 build_ui_quad_model(UIBox box){
+    return build_ui_quad_model(box.x, box.y, box.width, box.height);
+}
+
 Application::Application() : 
     glfw_context_(),
     window_(window_width_, window_height_, "Cathode Visualization", &glfw_context_), 
@@ -102,6 +106,9 @@ Application::Application() :
     logo_texture_(
         paths::asset("textures/hydro_logo.bmp").string().c_str()
     ),
+    close_btn_texture_(
+        paths::asset("textures/close_btn.png").string().c_str()
+    ),
     grid_(kCellWidth / kResolution, kCellLength / kResolution),
     point_cloud_renderer_(build_point_cloud(grid_), GL_POINTS),
     quad_renderer_(build_unit_quad(), GL_TRIANGLES),
@@ -114,7 +121,7 @@ Application::Application() :
         paths::asset("fonts/IvarTextHydro-Regular.ttf").string().c_str(), 
         static_cast<int>(96), window_width_, window_height_
     ),
-    input_manager_(window_.get_handle(), camera_, &glfw_context_)
+    input_manager_(window_, camera_, &glfw_context_)
 {
     glEnable(GL_DEPTH_TEST);
     
@@ -141,6 +148,9 @@ Application::Application() :
                                 0.0f, static_cast<float>(window_height_));
     display_text_renderer_.set_screen_size(window_width_, window_height_);
     regular_text_renderer_.set_screen_size(window_width_, window_height_);
+    if (window_.needs_initial_fullscreen()){
+        window_.toggle_fullscreen();
+    }
 }
 
 void Application::run() {
@@ -223,53 +233,57 @@ void Application::run() {
                     break;
                 }
                 
-                needs_redraw_ |= check_resize(last_fb_width, last_fb_height);
+                needs_redraw_ |= check_resize(last_fb_width, last_fb_height); 
 
                 if (needs_redraw_){
                     render_paused();
                     window_.swap_buffers();
                     needs_redraw_ = false;
                 }
+                
+                update_paused(); // Might switch state_ to Startup
                 break;
             }
         }
     }
 }
 
-UIBox Application::draw_button(UIPage page, const ButtonSpec& spec){
-    UIBox box{spec.x, spec.y, spec.width, spec.height};
-    Color box_color, label_color;
-    if(spec.box_color.has_value()){
-        box_color = spec.box_color.value();
-    } else {
-        box_color = spec.enabled ? Colors::WhiteHalfOpaque : Colors::WhiteQuarterOpaque;
-    }
-    if(spec.label_color.has_value()){
-        label_color = spec.label_color.value();
-    } else {
-        label_color = spec.enabled ? Colors::White : Colors::WhiteHalfOpaque;
-    }
+void Application::draw_button(UIPage page, const ButtonSpec& spec){
+    auto [x,y,w,h] = spec.box;
+    glm::mat4 button_model = build_ui_quad_model(spec.box);
 
+    Color box_color = spec.box_color.value_or(
+        spec.enabled ? Colors::WhiteHalfOpaque : Colors::WhiteQuarterOpaque
+    );
+    Color label_color = spec.label_color.value_or(
+        spec.enabled ? Colors::White : Colors::WhiteHalfOpaque
+    );
+    
     shader_.setVec4("color", box_color);
+    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), button_model);
 
-    quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f),
-        build_ui_quad_model(spec.x, spec.y, spec.width, spec.height)
-    );
-
-    glm::vec2 label_pos = regular_text_renderer_.center_text_in_box(
-        spec.label, spec.scale,
-        spec.x + spec.width * 0.5f,
-        spec.y + spec.height * 0.5f
-    );
-    TextLine label(spec.label, label_pos, spec.scale, label_color);
-    regular_text_renderer_.render_text(label);
+    if(spec.label_texture){
+        spec.label_texture->bind(0);
+        textured_shader_.setInt("Texture", 0);
+        textured_shader_.setVec4("tintColor", label_color);
+        textured_quad_renderer_.draw(
+            textured_shader_, ui_projection_, glm::mat4(1.0f), button_model
+        );    
+    } else {
+        glm::vec2 label_pos = regular_text_renderer_.center_text_in_box(
+            spec.label, spec.scale,
+            x + w * 0.5f,
+            y + h * 0.5f
+        );
+        TextLine label(spec.label, label_pos, spec.scale, label_color);
+        regular_text_renderer_.render_text(label);
+    }
 
     if (spec.enabled){
-        input_manager_.set_button_box(page, spec.action, box);
+        input_manager_.set_button_box(page, spec.action, spec.box);
     } else {
         input_manager_.remove_button_box(page, spec.action);
     }
-    return box;
 }
 
 void Application::clear_screen(){
@@ -329,6 +343,10 @@ void Application::draw_pause_overlay(){
     Color text_color = Colors::White;
     float textbox_padding = 20.0f;
     float lineshift = 30.0f;
+
+    float x_scale = window_width_ / kInitialWindowWidth;
+    float y_scale = window_height_ / kInitialWindowHeight;
+    float ui_scale = std::min(x_scale, y_scale);
     
     TextBlockLayout top_block = build_text_block(
         {
@@ -344,12 +362,38 @@ void Application::draw_pause_overlay(){
             TextLine("Controls", 0.0f, 0.0f, 0.4f, text_color, &display_text_renderer_),
             TextLine("W/A/S/D: Horizontal Movement", 0.0f, 0.0f, 0.3f, text_color, &regular_text_renderer_),
             TextLine("LSHIFT/SPACE: Vertical Movement", 0.0f, 0.0f, 0.3f, text_color, &regular_text_renderer_),
-            TextLine("MOUSE1 (HOLD): Pan", 0.0f, 0.0f, 0.6f, text_color, &regular_text_renderer_)
+            TextLine("MOUSE1 (HOLD): Pan", 0.0f, 0.0f, 0.3f, text_color, &regular_text_renderer_)
         },
         window_width_ * 0.5f, window_height_ * 0.5f,
         lineshift, textbox_padding
     );
 
+    std::string main_menu_btn_text = "Return to main menu";
+    float main_menu_btn_scale = 0.3f * ui_scale;
+    auto [width, ascent, descent] = display_text_renderer_.measure_text(
+        main_menu_btn_text,
+        main_menu_btn_scale
+    );
+    width += 2.0f * textbox_padding;
+    float height = ascent - descent + 2.0f * textbox_padding;
+    
+    ButtonSpec main_menu_btn{
+        .box = UIBox{
+            .x = window_width_ * 0.5f - width * 0.5f,
+            .y = window_height_ * 0.5f - bottom_block.box_height * 0.5f - height - textbox_padding,
+            .width = width,
+            .height = height
+        },
+        .scale = main_menu_btn_scale,
+        .box_color = Colors::Background,
+        .label_color = Colors::White,
+        .label_texture = nullptr,
+        .label = main_menu_btn_text,
+        .action = UIAction::GoToMainMenu,
+        .enabled = true        
+    };
+    
+    // Rendering
     shader_.setVec4("color", Colors::WhiteHalfOpaque);
     quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
         build_ui_quad_model(0.0f,0.0f,window_width_, window_height_)
@@ -370,6 +414,8 @@ void Application::draw_pause_overlay(){
         text.renderer->render_text(text);
     }
 
+    draw_button(UIPage::PauseMenu, main_menu_btn);
+
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 }
@@ -385,7 +431,8 @@ void Application::draw_startup_menu(){
     
     // Logo
     logo_texture_.bind(0);
-    textured_shader_.setInt("logoTexture", 0);
+    textured_shader_.setInt("Texture", 0);
+    textured_shader_.setVec4("tintColor", Colors::White);
     float logo_w = std::min(window_width_ * ui_scale * 0.2f, kInitialWindowWidth * 0.4f);
     float logo_h = logo_w / kLogoAspect;
     float logo_x = - logo_w * 0.1f;
@@ -436,13 +483,16 @@ void Application::draw_startup_menu(){
         }
     }
     ButtonSpec upload_btn_spec{
-        .x = upload_x, 
-        .y = upload_y, 
-        .width = upload_w, 
-        .height = upload_h, 
+        .box = UIBox{
+            .x = upload_x, 
+            .y = upload_y, 
+            .width = upload_w, 
+            .height = upload_h
+        }, 
         .scale = upload_scale,
         .box_color = std::nullopt,
         .label_color = std::nullopt,
+        .label_texture = nullptr,
         .label = file_loaded_ ? file_name_ : "Select CSV file",
         .action = UIAction::OpenFile,
         .enabled = !display_info_
@@ -454,43 +504,52 @@ void Application::draw_startup_menu(){
     float button_h = 50.0f * y_scale;
 
     ButtonSpec sim_btn_spec{
-        .x = window_width_ * 0.5f - button_w * 0.5f,
-        .y = upload_y - button_h - 20.0f,
-        .width = button_w,
-        .height = button_h,
+        .box = UIBox{
+            .x = window_width_ * 0.5f - button_w * 0.5f,
+            .y = upload_y - button_h - 20.0f,
+            .width = button_w,
+            .height = button_h
+        },
         .scale = 0.25f * ui_scale,
         .box_color = std::nullopt,
         .label_color = std::nullopt,
+        .label_texture = nullptr,
         .label = "Start simulation",
         .action = UIAction::StartSimulation,
-        .enabled = file_loaded_ && !display_info_
+        .enabled = (file_loaded_ || !use_file_data_) && !display_info_
     };
     draw_button(UIPage::StartMenu, sim_btn_spec);
     
     // Checkbox text (no button functionality)
     ButtonSpec sim_type_btn_1{
-        .x = window_width_ * 0.5f - button_w * 0.5f,
-        .y = upload_y - 2.0f*(button_h + 20.0f),
-        .width = button_w,
-        .height = button_h,
-        .scale = 0.25 * ui_scale,
+        .box = UIBox{
+            .x = window_width_ * 0.5f - button_w * 0.5f,
+            .y = upload_y - 2.0f*(button_h + 20.0f),
+            .width = button_w,
+            .height = button_h
+        },
+        .scale = 0.25f * ui_scale,
         .box_color = std::nullopt,
         .label_color = std::nullopt,
+        .label_texture = nullptr,
         .label = "Use pseudo-random example data:",
-        .action = UIAction::NoAction,
-        .enabled = false
+        .action = UIAction::ToggleUseFileData,
+        .enabled = !display_info_ // just to get the same color
     };
     draw_button(UIPage::StartMenu, sim_type_btn_1);
 
     // Checkbox (should use generated data or not)
     ButtonSpec sim_type_btn_2{
-        .x = window_width_ * 0.5f + button_w * 0.5f + 10.0f,
-        .y = upload_y - 2.0f*(button_h + 20.0f),
-        .width = button_h,
-        .height = button_h,
+        .box = UIBox{
+            .x = window_width_ * 0.5f + button_w * 0.5f + 10.0f,
+            .y = upload_y - 2.0f*(button_h + 20.0f),
+            .width = button_h,
+            .height = button_h
+        },
         .scale = 0.4f * ui_scale,
         .box_color = std::nullopt,
         .label_color = Colors::Background,
+        .label_texture = nullptr,
         .label = use_file_data_ ? "" : "X",
         .action = UIAction::ToggleUseFileData,
         .enabled = !display_info_
@@ -500,13 +559,16 @@ void Application::draw_startup_menu(){
     // Info tab button
     button_w = 200.0f * x_scale;
     ButtonSpec info_btn_spec{
-        .x = window_width_ * 0.5f - button_w * 0.5f,
-        .y = upload_y - 3.0f * (button_h + 20.0f),
-        .width = button_w,
-        .height = button_h,
+        .box = UIBox{
+            .x = window_width_ * 0.5f - button_w * 0.5f,
+            .y = upload_y - 3.0f * (button_h + 20.0f),
+            .width = button_w,
+            .height = button_h
+        },
         .scale = 0.25f * ui_scale,
         .box_color = std::nullopt,
         .label_color = std::nullopt,
+        .label_texture = nullptr,
         .label = "Show info",
         .action = UIAction::ShowInfo,
         .enabled = !display_info_
@@ -521,13 +583,13 @@ void Application::draw_startup_menu(){
     float info_title_scale = 0.4f * ui_scale;
     float info_text_scale = 0.3f * ui_scale;
 
-    text_color = Colors::Background;
+    text_color = Colors::White;
     TextBlockLayout info_block = build_text_block(
         {
-            TextLine("Info", info_title_scale, text_color, &display_text_renderer_),
-            TextLine("Expected CSV format:", info_text_scale, text_color, &regular_text_renderer_),
-            TextLine("Line 1: \"x, y, z\"", info_text_scale, text_color, &regular_text_renderer_),
-            TextLine("Lines 2,3,..: \"data", info_text_scale, text_color, &regular_text_renderer_)
+            TextLine("Expected CSV format:", info_title_scale, text_color, &regular_text_renderer_),
+            TextLine("Header: x, y, z", info_text_scale, text_color, &regular_text_renderer_),
+            TextLine("With corresponding data lines", info_text_scale, text_color, &regular_text_renderer_),
+            TextLine("(Where z denotes the \"up\"-direction)", info_text_scale, text_color, &regular_text_renderer_)
         },
         info_x, info_y,
         lineshift, textbox_padding
@@ -538,7 +600,7 @@ void Application::draw_startup_menu(){
         quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
             build_ui_quad_model(0.0f,0.0f,window_width_, window_height_)
         );
-        shader_.setVec4("color", Colors::White);
+        shader_.setVec4("color", Colors::Background);
         quad_renderer_.draw(shader_, ui_projection_, glm::mat4(1.0f), 
             build_ui_quad_model(
                 info_x - info_w * 0.5f,
@@ -551,13 +613,17 @@ void Application::draw_startup_menu(){
 
         float button_h = 50.0f * ui_scale; //Square
         ButtonSpec close_info_btn_spec{
-            .x = info_x + 0.5f * info_w - button_h - 10.0f,
-            .y = info_y + 0.5f * info_h - button_h - 10.0f,
-            .width = button_h, .height = button_h,
+            .box = UIBox{
+                .x = info_x + 0.5f * info_w - button_h - 10.0f,
+                .y = info_y + 0.5f * info_h - button_h - 10.0f,
+                .width = button_h,
+                .height = button_h
+            },
             .scale = 0.4f * ui_scale,
-            .box_color = Colors::Background, 
-            .label_color = Colors::White,
-            .label = "X",
+            .box_color = Colors::WhiteHalfOpaque, 
+            .label_color = Colors::Background,
+            .label_texture = &close_btn_texture_,
+            .label = "",
             .action = UIAction::HideInfo,
             .enabled = true
         };
@@ -613,10 +679,14 @@ void Application::update_startup(){
             display_info_ = false;
             needs_redraw_ = true;
             break;
-        
+
+        case UIAction::ToggleFullscreen:
+            input_manager_.toggle_fullscreen();
+            needs_redraw_ = true;
+            break;
+
         case UIAction::ToggleUseFileData:
             use_file_data_ = !use_file_data_;
-            simulation_btn_active_ = true;
             needs_redraw_ = true;
             break;
 
@@ -639,6 +709,23 @@ void Application::render_running() {
     clear_screen();
     draw_scene();
     draw_hud();
+}
+
+void Application::update_paused(){
+    if (auto action = input_manager_.consume_triggered_action()){
+        switch (*action){
+        case UIAction::GoToMainMenu:
+            input_manager_.set_paused(false);
+            startup_finished_ = false;
+            state_ = AppState::Startup;
+            input_manager_.set_active_page(UIPage::StartMenu);
+            needs_redraw_ = true;
+            break;
+        
+        default:
+            break;
+        }
+    }
 }
 
 void Application::render_paused(){

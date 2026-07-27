@@ -1,7 +1,10 @@
+#define GLFW_EXPOSE_NATIVE_WIN32
 #include "window.hpp"
 #include "glfw_context.hpp"
-#include <iostream>
+#include <GLFW/glfw3native.h>
+#include <windows.h>
 #include <stdexcept>
+#include <algorithm>
 
 Window::Window(int width, int height, const std::string& title, GLFWUserContext* context) :
     width_(width), height_(height){
@@ -11,24 +14,25 @@ Window::Window(int width, int height, const std::string& title, GLFWUserContext*
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-    glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
     
-    // Window height is subtracted by one to ensure the program isn't minimized during file dialogs.
-    window_ = glfwCreateWindow(width_, height_ - 1, title.c_str(), nullptr, nullptr);
+    GLFWmonitor* primary = glfwGetPrimaryMonitor();
+    int work_x = 0, work_y = 0, work_w = width_, work_h = height_;
+    if (primary) {
+        glfwGetMonitorWorkarea(primary, &work_x, &work_y, &work_w, &work_h);
+    }
+    bool fits = (work_w >= width_) && (work_h >= height_);
+    needs_initial_fullscreen_ = !fits;
+    
+    window_ = glfwCreateWindow(width_, height_, title.c_str(), nullptr, nullptr);
     if (!window_) {
         glfwTerminate();
         throw std::runtime_error("Failed to create GLFW window");
     }
-
-    GLFWmonitor* primary = glfwGetPrimaryMonitor();
-    const GLFWvidmode* mode = glfwGetVideoMode(primary);
-    if (mode) {
-        int monitor_x, monitor_y;
-        glfwGetMonitorPos(primary, &monitor_x, &monitor_y);
-        int window_x = monitor_x + (mode->width - width_) / 2;
-        int window_y = monitor_y + (mode->height - height_) / 2;
-        glfwSetWindowPos(window_, window_x, window_y);  
+    
+    if (primary){
+        int window_x = work_x + std::max(0, (work_w - width_) / 2);
+        int window_y = work_y + std::max(0, (work_h - height_) / 2);
+        glfwSetWindowPos(window_, window_x, window_y);
     }
 
     glfwMakeContextCurrent(window_);
@@ -83,4 +87,29 @@ bool Window::should_close() const {
 
 void Window::swap_buffers() {
     glfwSwapBuffers(window_);
+}
+
+void Window::toggle_fullscreen(){
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    if(!monitor) return;
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    if(!mode) return;
+
+    if(!is_fullscreen_){
+        glfwGetWindowPos(window_, &windowed_x_, &windowed_y_);
+        glfwGetWindowSize(window_, &windowed_w_, &windowed_h_);
+        glfwSetWindowMonitor(
+            window_, monitor, 0, 0, mode->width, mode->height, mode->refreshRate
+        );
+        is_fullscreen_ = true;
+    } else {
+        glfwSetWindowMonitor(
+            window_, nullptr, windowed_x_, windowed_y_, windowed_w_, windowed_h_, 0
+        );
+        HWND hwnd = glfwGetWin32Window(window_);
+        SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        is_fullscreen_ = false;
+    }
 }
