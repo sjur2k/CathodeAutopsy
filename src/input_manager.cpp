@@ -78,10 +78,6 @@ bool InputManager::has_active_input() const {
         || glfwGetKey(window_handle, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
 }
 
-void InputManager::toggle_fullscreen(){
-    window_.toggle_fullscreen();
-}
-
 void InputManager::set_mode(InputMode mode){
     GLFWwindow* window_handle = window_.get_handle();
     mode_ = mode;
@@ -229,26 +225,9 @@ void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int a
         UIPage page = input_manager->get_active_page();
         if (page == UIPage::None || page == UIPage::PauseMenu){
             input_manager->set_paused(!input_manager->is_paused());
-        } else if (page == UIPage::StartMenu){
-            /* if (active_window->is_maximized()){
-                input_manager->toggle_fullscreen();
-                std::cout<<"exiting fullscreen"<<std::endl; // TODO: remove
-            } */
-           void();
+        } break;
         }
-        break;
-    }
-    case GLFW_KEY_F11:
-        input_manager->toggle_fullscreen();
-        break;
-    
     default:
         break;
     }
 }
-
-/* void InputManager::scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
-    auto* ctx = static_cast<GLFWUserContext*>(glfwGetWindowUserPointer(window));
-    if (!ctx || !ctx->input_manager) return;
-    InputManager* input_manager = ctx->input_manager;
-} */

@@ -30,7 +30,6 @@ enum class UIAction {
     ShowInfo,
     HideInfo,
     ToggleUseFileData,
-    ToggleFullscreen,
     GoToMainMenu,
     // Add more actions if needed.
 };
@@ -43,7 +42,6 @@ class InputManager {
         bool is_paused() {return paused_;}
         bool has_active_input() const;
         void set_paused(bool value) {paused_ = value;}
-        void toggle_fullscreen();
         void set_mode(InputMode mode);
         UIPage get_active_page() {return active_page_;}
         void set_active_page(UIPage page) {active_page_ = page;}

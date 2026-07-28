@@ -5,6 +5,7 @@ project (CathodeAutopsy)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(E57Format CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 include(FetchContent)
 FetchContent_Declare(
@@ -84,6 +85,7 @@ target_link_libraries(CathodeAutopsy PRIVATE
     glm::glm
     freetype
     tinyfiledialogs
+    E57Format
 )
 
 target_link_options(CathodeAutopsy PRIVATE -static-libgcc -static-libstdc++ -static)

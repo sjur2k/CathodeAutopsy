@@ -148,9 +148,6 @@ Application::Application() :
                                 0.0f, static_cast<float>(window_height_));
     display_text_renderer_.set_screen_size(window_width_, window_height_);
     regular_text_renderer_.set_screen_size(window_width_, window_height_);
-    if (window_.needs_initial_fullscreen()){
-        window_.toggle_fullscreen();
-    }
 }
 
 void Application::run() {
@@ -677,11 +674,6 @@ void Application::update_startup(){
 
         case UIAction::HideInfo:
             display_info_ = false;
-            needs_redraw_ = true;
-            break;
-
-        case UIAction::ToggleFullscreen:
-            input_manager_.toggle_fullscreen();
             needs_redraw_ = true;
             break;
 

@@ -1,8 +1,5 @@
-#define GLFW_EXPOSE_NATIVE_WIN32
 #include "window.hpp"
 #include "glfw_context.hpp"
-#include <GLFW/glfw3native.h>
-#include <windows.h>
 #include <stdexcept>
 #include <algorithm>
 
@@ -21,17 +18,19 @@ Window::Window(int width, int height, const std::string& title, GLFWUserContext*
         glfwGetMonitorWorkarea(primary, &work_x, &work_y, &work_w, &work_h);
     }
     bool fits = (work_w >= width_) && (work_h >= height_);
-    needs_initial_fullscreen_ = !fits;
-    
+    if (!fits) {
+        glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+    }
+
     window_ = glfwCreateWindow(width_, height_, title.c_str(), nullptr, nullptr);
     if (!window_) {
         glfwTerminate();
         throw std::runtime_error("Failed to create GLFW window");
     }
     
-    if (primary){
-        int window_x = work_x + std::max(0, (work_w - width_) / 2);
-        int window_y = work_y + std::max(0, (work_h - height_) / 2);
+    if (fits && primary){
+        int window_x = work_x + (work_w - width_ ) / 2;
+        int window_y = work_y + (work_h - height_ ) / 2;
         glfwSetWindowPos(window_, window_x, window_y);
     }
 
@@ -87,29 +86,4 @@ bool Window::should_close() const {
 
 void Window::swap_buffers() {
     glfwSwapBuffers(window_);
-}
-
-void Window::toggle_fullscreen(){
-    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-    if(!monitor) return;
-    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    if(!mode) return;
-
-    if(!is_fullscreen_){
-        glfwGetWindowPos(window_, &windowed_x_, &windowed_y_);
-        glfwGetWindowSize(window_, &windowed_w_, &windowed_h_);
-        glfwSetWindowMonitor(
-            window_, monitor, 0, 0, mode->width, mode->height, mode->refreshRate
-        );
-        is_fullscreen_ = true;
-    } else {
-        glfwSetWindowMonitor(
-            window_, nullptr, windowed_x_, windowed_y_, windowed_w_, windowed_h_, 0
-        );
-        HWND hwnd = glfwGetWin32Window(window_);
-        SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
-        );
-        is_fullscreen_ = false;
-    }
 }
