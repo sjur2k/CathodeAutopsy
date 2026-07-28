@@ -1,4 +1,5 @@
 lib/** linguist-vendored
-include/glad/glad.h linguist-generated
 include/KHR/khrplatform.h linguist-generated
-src/glad/glad.c linguist-generated
+**/tinyfiledialogs/** linguist-generated
+**/glad/** linguist-generated
+**/stb_image/** linguist-generated
