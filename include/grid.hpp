@@ -1,7 +1,7 @@
 #pragma once
-#include <vector>
-#include <glm/glm.hpp>
 #include "geometry.hpp"
+#include <glm/glm.hpp>
+#include <vector>
 
 struct Dimensions{
     int rows,cols;
@@ -12,16 +12,23 @@ class Grid{
         Grid(int rows, int cols, Pose relative_origin = Pose()) : 
             rows_(rows),
             cols_(cols),
-            grid_serialized_(std::vector<float>(rows * cols)),
-            relative_origin_(relative_origin) 
+            relative_origin_(relative_origin),
+            grid_serialized_(std::vector<float>(rows * cols))
         {}
+        
+        // Mutating operations
+        void fill_random_smooth();
+        std::vector<glm::vec3> generate_random_point_cloud();
+        
+        // Accessors
         Dimensions get_dimensions() const;
         float get_value(int i, int j) const;
-        void fill_random_smooth();
-        void print_grid();
-        void write_grid_to_PPM();
-        void write_grid_to_csv(float res);
-        std::vector<glm::vec3> get_point_cloud_vec3();
+        std::vector<glm::vec3> get_point_cloud_vec3() const;
+        
+        // Exports
+        void write_grid_to_PPM() const;
+        void write_grid_to_csv(float res) const;
+
     private:
         int rows_, cols_;
         Pose relative_origin_;

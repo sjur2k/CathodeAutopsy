@@ -1,7 +1,11 @@
 #include "window.hpp"
 #include "glfw_context.hpp"
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
 #include <stdexcept>
-#include <algorithm>
+#include <string>
 
 Window::Window(int width, int height, const std::string& title, GLFWUserContext* context) :
     width_(width), height_(height){
@@ -50,6 +54,15 @@ Window::Window(int width, int height, const std::string& title, GLFWUserContext*
     glViewport(0, 0, width_, height_);
 }
 
+Window::~Window() {
+    if (window_) {
+        glfwDestroyWindow(window_);
+    }
+    glfwTerminate();
+}
+
+
+// Static callbacks (GLFW C API)
 void Window::framebuffer_size_callback(GLFWwindow* window, int width, int height){
     auto* ctx = static_cast<GLFWUserContext*>(glfwGetWindowUserPointer(window));
     if(!ctx || !ctx->window) return;
@@ -71,19 +84,4 @@ void Window::window_refresh_callback(GLFWwindow* window){
     if(!ctx || !ctx->window) return;
     Window* self = ctx->window;
     if (self->refresh_callback_) self->refresh_callback_();
-}
-
-Window::~Window() {
-    if (window_) {
-        glfwDestroyWindow(window_);
-    }
-    glfwTerminate();
-}
-
-bool Window::should_close() const {
-    return glfwWindowShouldClose(window_);
-}
-
-void Window::swap_buffers() {
-    glfwSwapBuffers(window_);
 }

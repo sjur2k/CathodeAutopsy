@@ -1,24 +1,19 @@
-#include <iostream>
-#include <iomanip>
+
+#include "camera.hpp"
+#include "geometry.hpp"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include <iostream>
 #include <string>
-#include "geometry.hpp"
-#include "grid.hpp"
-#include "camera.hpp"
+#include <cmath>
+#include <cstdlib>
 
-Pose Camera::get_pose() const {
-    return pose_;
-}
+// Helpers
+static std::string space(int num);
 
-void Camera::set_pose(const Pose& new_pose) {
-    pose_ = new_pose;
-}
-
-void Camera::reset_pose(){
-    pose_ = initial_pose_;
-}
-
+// Accessors
 glm::mat4 Camera::get_view_matrix() const {
     glm::mat4 view = glm::mat4(1.0f);
     view = glm::rotate(view, -glm::radians(pose_.rotation.pitch), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -38,22 +33,9 @@ glm::mat4 Camera::get_projection_matrix() const {
     projection[3][2] = -(2.0f * far_plane_ * near_plane_) / (far_plane_ - near_plane_);
     return projection;
 }
-const char* space(auto num){
-    int num_spaces = 0;
-    num >= 0 ? void(num_spaces++) : void();
-    if (abs(num)<=10){
-        num_spaces+=2;
-    } else if (abs(num)<=100){
-        num_spaces++;
-    }
-    std::string spaces;
-    for (int i = 0; i < num_spaces; i++){
-        spaces += " ";
-    } 
-    return spaces.c_str();
-}
 
-void Camera::print_pose(){
+// Debug
+void Camera::print_pose() const{
     auto [x,y,z] = pose_.position.to_int();
     auto [pitch, yaw, roll] = pose_.rotation.to_int();
     std::cout
@@ -65,4 +47,16 @@ void Camera::print_pose(){
         << space(pitch) << pitch << ","
         << space(yaw)   << yaw   << ","
         << space(roll)  << roll  << ")\n\n";
+}
+
+// Helpers
+static std::string space(int num){
+    int num_spaces = 0;
+    if (num >= 0) num_spaces++;
+    if (abs(num)<=10){
+        num_spaces+=2;
+    } else if (abs(num)<=100){
+        num_spaces++;
+    }
+    return std::string(num_spaces, ' ');
 }

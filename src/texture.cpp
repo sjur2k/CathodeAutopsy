@@ -1,14 +1,20 @@
 #include "texture.hpp"
+#include "paths.hpp"
+
 #include "stb_image/stb_image.h"
 #include <glad/glad.h>
+
 #include <stdexcept>
+#include <string>
 
 Texture::Texture(const std::string& path) {
     stbi_set_flip_vertically_on_load(true);
-    unsigned char* data = stbi_load(path.c_str(), &width_, &height_, &channels_, 0);
+
+    std::string full_path = paths::asset(path).string();
+    unsigned char* data = stbi_load(full_path.c_str(), &width_, &height_, &channels_, 0);
     if (!data){
         throw std::runtime_error(
-            "Failed to load texture: " + path + " (" + stbi_failure_reason() + ")"
+            "Failed to load texture: " + full_path + " (" + stbi_failure_reason() + ")"
         );
     }
     GLenum format = (channels_ == 4) ? GL_RGBA : GL_RGB;
@@ -28,6 +34,7 @@ Texture::~Texture() {
     glDeleteTextures(1, &id_);
 }
 
+// Core behavior
 void Texture::bind(unsigned int unit) const {
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, id_);

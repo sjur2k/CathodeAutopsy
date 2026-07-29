@@ -1,9 +1,16 @@
 #include "text_renderer.hpp"
 #include "paths.hpp"
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include <iostream>
+#include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <tuple>
+#include <vector>
 
 TextBlockLayout build_text_block(
     const std::vector<TextLine>& lines,
@@ -47,25 +54,25 @@ TextBlockLayout build_text_block(
     return layout;
 }
 
-TextRenderer::TextRenderer(const std::string& font_path, unsigned int pixel_height,
-                            int screen_width, int screen_height)
-    : shader_(
-        paths::asset("shaders/text.vert").string().c_str(), 
-        paths::asset("shaders/text.frag").string().c_str()
-    )
+TextRenderer::TextRenderer(
+    const std::string& font_path, 
+    unsigned int pixel_height,
+    int screen_width,
+    int screen_height
+) : shader_("shaders/text.vert", "shaders/text.frag")
 {
     set_screen_size(screen_width, screen_height);
 
     FT_Library ft;
-    FT_Init_FreeType(&ft);
     if (FT_Init_FreeType(&ft)) {
         std::cerr << "FreeType: could not init library\n";
         return;
     }
 
     FT_Face face;
-    if (FT_New_Face(ft, font_path.c_str(), 0, &face)) {   // <- this call must exist and use font_path + face
-        std::cerr << "FreeType: failed to load font: " << font_path << "\n";
+    std::string full_font_path = paths::asset(font_path).string();
+    if (FT_New_Face(ft, full_font_path.c_str(), 0, &face)) {
+        std::cerr << "FreeType: failed to load font: " << full_font_path << "\n";
         return;
     }
 
@@ -122,46 +129,7 @@ TextRenderer::~TextRenderer() {
     }
 }
 
-void TextRenderer::set_screen_size(int width, int height) {
-    projection_ = glm::ortho(0.0f, static_cast<float>(width),
-                              0.0f, static_cast<float>(height));
-}
-glm::vec2 TextRenderer::center_text_in_box(
-    const std::string& text,
-    float scale,
-    float box_center_x, 
-    float box_center_y
-) const {
-    auto [width, ascent, descent] = measure_text(text, scale);
-    return glm::vec2(
-        box_center_x - width * 0.5f,
-        box_center_y - (ascent - descent) * 0.5f
-    );
-}
-
-std::tuple<float, float, float> TextRenderer::measure_text( 
-    const std::string& text, float scale
-) const {
-    float ascent = 0.0f;
-    float descent = 0.0f;
-    float width = 0.0f;
-    for (char c : text){
-        auto it = glyphs_.find(c);
-        if (it == glyphs_.end()) continue;
-        const Glyph& g = it->second;
-        width += (g.advance >> 6)*scale;
-        float top = g.bearing.y * scale;
-        float bottom = (g.size.y - g.bearing.y) * scale;
-        ascent = std::max(ascent, top);
-        descent = std::max(descent, bottom);
-    }
-    return std::make_tuple(width, ascent, descent);
-}
-
-std::tuple<float,float,float> TextRenderer::measure_text(const TextLine& text) const{
-    return measure_text(text.text, text.scale);
-}
-
+// Core behavior
 void TextRenderer::render_text(TextLine& text){
     shader_.use();
     shader_.setMat4("projection", projection_);
@@ -201,4 +169,47 @@ void TextRenderer::render_text(TextLine& text){
 
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+// Mutators
+void TextRenderer::set_screen_size(int width, int height) {
+    projection_ = glm::ortho(0.0f, static_cast<float>(width),
+                              0.0f, static_cast<float>(height));
+}
+
+// Accessors
+std::tuple<float, float, float> TextRenderer::measure_text( 
+    const std::string& text, float scale
+) const {
+    float ascent = 0.0f;
+    float descent = 0.0f;
+    float width = 0.0f;
+    for (char c : text){
+        auto it = glyphs_.find(c);
+        if (it == glyphs_.end()) continue;
+        const Glyph& g = it->second;
+        width += (g.advance >> 6)*scale;
+        float top = g.bearing.y * scale;
+        float bottom = (g.size.y - g.bearing.y) * scale;
+        ascent = std::max(ascent, top);
+        descent = std::max(descent, bottom);
+    }
+    return std::make_tuple(width, ascent, descent);
+}
+
+std::tuple<float,float,float> TextRenderer::measure_text(const TextLine& text) const{
+    return measure_text(text.text, text.scale);
+}
+
+glm::vec2 TextRenderer::center_text_in_box(
+    const std::string& text,
+    float scale,
+    float box_center_x, 
+    float box_center_y
+) const {
+    auto [width, ascent, descent] = measure_text(text, scale);
+    return glm::vec2(
+        box_center_x - width * 0.5f,
+        box_center_y - (ascent - descent) * 0.5f
+    );
 }

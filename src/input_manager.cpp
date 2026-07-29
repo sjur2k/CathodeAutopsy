@@ -1,8 +1,15 @@
-#include <iostream>
-#include "glfw_context.hpp"
-#include "camera.hpp"
-#include "window.hpp"
 #include "input_manager.hpp"
+#include "camera.hpp"
+#include "geometry.hpp"
+#include "glfw_context.hpp"
+#include "window.hpp"
+
+#include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+
+#include <cmath>
+#include <optional>
+#include <unordered_map>
 
 InputManager::InputManager(Window& window, Camera& camera, GLFWUserContext* context) 
     : window_(window), camera_(camera) {
@@ -22,6 +29,7 @@ InputManager::~InputManager(){
     glfwDestroyCursor(hand_cursor_);
 }
 
+// Core behavior
 void InputManager::process_input(float delta_time) {
 
     float velocity = movement_speed_multiplier_ * delta_time;
@@ -67,6 +75,7 @@ void InputManager::process_input(float delta_time) {
     camera_.set_pose(current_pose);
 }
 
+// State queries
 bool InputManager::has_active_input() const {
     if (orbiting_) return true;
     GLFWwindow* window_handle = window_.get_handle();
@@ -78,6 +87,7 @@ bool InputManager::has_active_input() const {
         || glfwGetKey(window_handle, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
 }
 
+// State mutators
 void InputManager::set_mode(InputMode mode){
     GLFWwindow* window_handle = window_.get_handle();
     mode_ = mode;
@@ -90,12 +100,24 @@ void InputManager::set_mode(InputMode mode){
     }
 }
 
+void InputManager::set_button_box(UIPage page, UIAction action, UIBox box){
+    page_buttons_[page][action] = box;
+}
+
 void InputManager::remove_button_box(UIPage page, UIAction action){
     auto it = page_buttons_.find(page);
     if (it == page_buttons_.end()) return;
     it->second.erase(action);
 }
 
+// Actions
+std::optional<UIAction> InputManager::consume_triggered_action(){
+    auto result = triggered_action_;
+    triggered_action_.reset();
+    return result;
+}
+
+// Helpers
 bool InputManager::hit_test_active_page(double x, double y, UIAction& out_action) const{
     auto it = page_buttons_.find(active_page_);
     if (it == page_buttons_.end()) return false;
@@ -134,12 +156,7 @@ void InputManager::orbit(double xpos, double ypos) {
     camera_.set_pose(current_pose);
 }
 
-std::optional<UIAction> InputManager::consume_triggered_action(){
-    auto result = triggered_action_;
-    triggered_action_.reset();
-    return result;
-}
-
+// Static callbacks (GLFW C API)
 void InputManager::mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     auto* ctx = static_cast<GLFWUserContext*>(glfwGetWindowUserPointer(window));
     if (!ctx || !ctx->input_manager) return;

@@ -1,5 +1,10 @@
 #include "paths.hpp"
+
+#define NOMINMAX
 #include <windows.h>
+
+#include <filesystem>
+#include <string>
 
 namespace paths {
 
@@ -16,4 +21,5 @@ std::filesystem::path asset(const std::string& relative_path){
 std::string extract_name(const std::string path){
     return std::filesystem::path(path).filename().string();
 }
+
 }

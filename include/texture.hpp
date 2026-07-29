@@ -1,14 +1,19 @@
 #pragma once
+
 #include <string>
 
 class Texture{
     public:
         explicit Texture(const std::string& path);
         ~Texture();
+        
         Texture(const Texture&) = delete;
         Texture& operator=(const Texture&) = delete;
 
+        // Core behavior
         void bind(unsigned int unit = 0) const;
+
+        // Accessors
         int width() const {return width_;}
         int height() const {return height_;}
 

@@ -1,0 +1,11 @@
+prefix=C:/sjur2k/CathodeAutopsy/lib/xerces-c-install
+exec_prefix=C:/sjur2k/CathodeAutopsy/lib/xerces-c-install
+libdir=C:/sjur2k/CathodeAutopsy/lib/xerces-c-install/lib
+includedir=C:/sjur2k/CathodeAutopsy/lib/xerces-c-install/include
+
+Name: Xerces-C++
+Description: Validating XML parser library for C++
+Version: 3.2.3
+Libs: -LC:/sjur2k/CathodeAutopsy/lib/xerces-c-install/lib -lxerces-c
+Libs.private: 
+Cflags: -IC:/sjur2k/CathodeAutopsy/lib/xerces-c-install/include

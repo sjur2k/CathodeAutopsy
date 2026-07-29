@@ -1,57 +1,22 @@
+#include "grid.hpp"
+#include "paths.hpp"
+#include "geometry.hpp"
+
+#include <glm/glm.hpp>
+
 #include <vector>
-#include <random>
 #include <cmath>
 #include <fstream>
 #include <algorithm>
 #include <cstdint>
-#include <iostream>
 
-#include "grid.hpp"
-#include "geometry.hpp"
-#include "paths.hpp"
+// Noise generation helpers
+static float hash2(int x, int y);
+static float smooth(float t);
+static float valueNoise(float x, float y);
+static float fbm(float x, float y, int octaves, float persistence = 0.5f);
 
-float hash2(int x, int y){
-    uint32_t h = static_cast<uint32_t>(x * 374761393u + static_cast<uint32_t>(y * 668265263u));
-    h = (h ^ (h >> 13)) * 1274126177u;
-    h ^= h >> 16;
-    return (h & 0xFFFFFF) / static_cast<float>(0x1000000);
-}
-
-float smooth(float t){
-    return t * t * (3.0f - 2.0f * t);
-}
-
-float valueNoise(float x, float y){
-    int x0 = static_cast<int>(floor(x));
-    int x1 = x0 + 1;
-    int y0 = static_cast<int>(floor(y));
-    int y1 = y0 + 1;
-
-    float sx = smooth(x - static_cast<float>(x0));
-    float sy = smooth(y - static_cast<float>(y0));
-
-    float n0 = hash2(x0, y0);
-    float n1 = hash2(x1, y0);
-    float ix0 = n0 + sx * (n1 - n0);
-
-    n0 = hash2(x0, y1);
-    n1 = hash2(x1, y1);
-    float ix1 = n0 + sx * (n1 - n0);
-
-    return ix0 + sy * (ix1 - ix0);
-}
-
-float fbm(float x, float y, int octaves, float persistence = 0.5f) {
-    float sum = 0, amp = 0.5f, freq = 1.0f, norm = 0;
-    for (int k = 0; k < octaves; ++k) {
-        sum  += amp * valueNoise(x * freq, y * freq);
-        norm += amp;
-        freq *= 2.0f;   // lacunarity — finer features each octave
-        amp  *= persistence;   // persistence — how much they contribute
-    }
-    return sum / norm;  // back to ~[0,1]
-}
-
+// Mutating operations
 void Grid::fill_random_smooth(){
     float scale = 1.0f / 32.0f;
     int octaves = 6;
@@ -64,6 +29,12 @@ void Grid::fill_random_smooth(){
     }
 }
 
+std::vector<glm::vec3> Grid::generate_random_point_cloud(){
+    fill_random_smooth();
+    return get_point_cloud_vec3();
+}
+
+// Accessors
 Dimensions Grid::get_dimensions() const{
     return {rows_, cols_};
 }
@@ -72,18 +43,24 @@ float Grid::get_value(int i, int j) const{
     return grid_serialized_[j * cols_ + i];
 }
 
-
-void Grid::print_grid() {
-    for (int j = 0; j < rows_; j++){
-        for (int i = 0; i < cols_; i++){
-            printf("%f ", get_value(i, j));
+std::vector<glm::vec3> Grid::get_point_cloud_vec3() const{
+    std::vector<glm::vec3> point_cloud;
+    point_cloud.reserve(rows_ * cols_);
+    for (int j = 0; j < rows_; j++) {
+        for (int i = 0; i < cols_; i++) {
+            float x = i + relative_origin_.position.x;
+            float y = get_value(i, j) + relative_origin_.position.y;
+            float z = j + relative_origin_.position.z;
+            point_cloud.emplace_back(x, y, z);
         }
-        printf("\n");
     }
+    return point_cloud;
 }
 
-void Grid::write_grid_to_PPM() {
-    std::ofstream out(paths::asset("data/grid.ppm").string().c_str(), std::ios::binary);
+// Exports
+void Grid::write_grid_to_PPM() const{
+    std::string output_path = paths::asset("data/grid.ppm").string();
+    std::ofstream out(output_path.c_str(), std::ios::binary);
     float minVal = *min_element(grid_serialized_.begin(), grid_serialized_.end());
     float maxVal = *max_element(grid_serialized_.begin(), grid_serialized_.end());
     float range = (maxVal - minVal) > 1e-6f ? (maxVal - minVal) : 1.0f;
@@ -104,8 +81,9 @@ void Grid::write_grid_to_PPM() {
     out.close();
 }
 
-void Grid::write_grid_to_csv(float res){
-    std::ofstream out(paths::asset("data/grid.csv").string().c_str());
+void Grid::write_grid_to_csv(float res) const{
+    std::string output_path = paths::asset("data/grid.csv").string();
+    std::ofstream out(output_path.c_str());
     out <<"#"<<"rows"<<","<<rows_<<","<<"cols"<<","<<cols_<<","<<"resolution"<<","<<res<<"\n";
     out << "x,y,z\n";
     for (int j = 0; j < rows_; j++){
@@ -116,16 +94,45 @@ void Grid::write_grid_to_csv(float res){
     out.close();
 }
 
-std::vector<glm::vec3> Grid::get_point_cloud_vec3() {
-    std::vector<glm::vec3> point_cloud;
-    point_cloud.reserve(rows_ * cols_);
-    for (int j = 0; j < rows_; j++) {
-        for (int i = 0; i < cols_; i++) {
-            float x = i + relative_origin_.position.x;
-            float y = get_value(i, j) + relative_origin_.position.y;
-            float z = j + relative_origin_.position.z;
-            point_cloud.emplace_back(x, y, z);
-        }
+// Noise generation helpers
+static float hash2(int x, int y){
+    uint32_t h = static_cast<uint32_t>(x * 374761393u + static_cast<uint32_t>(y * 668265263u));
+    h = (h ^ (h >> 13)) * 1274126177u;
+    h ^= h >> 16;
+    return (h & 0xFFFFFF) / static_cast<float>(0x1000000);
+}
+
+static float smooth(float t){
+    return t * t * (3.0f - 2.0f * t);
+}
+
+static float valueNoise(float x, float y){
+    int x0 = static_cast<int>(floor(x));
+    int x1 = x0 + 1;
+    int y0 = static_cast<int>(floor(y));
+    int y1 = y0 + 1;
+
+    float sx = smooth(x - static_cast<float>(x0));
+    float sy = smooth(y - static_cast<float>(y0));
+
+    float n0 = hash2(x0, y0);
+    float n1 = hash2(x1, y0);
+    float ix0 = n0 + sx * (n1 - n0);
+
+    n0 = hash2(x0, y1);
+    n1 = hash2(x1, y1);
+    float ix1 = n0 + sx * (n1 - n0);
+
+    return ix0 + sy * (ix1 - ix0);
+}
+
+static float fbm(float x, float y, int octaves, float persistence) {
+    float sum = 0, amp = 0.5f, freq = 1.0f, norm = 0;
+    for (int k = 0; k < octaves; ++k) {
+        sum  += amp * valueNoise(x * freq, y * freq);
+        norm += amp;
+        freq *= 2.0f;   // lacunarity — finer features each octave
+        amp  *= persistence;   // persistence — how much they contribute
     }
-    return point_cloud;
+    return sum / norm;  // back to ~[0,1]
 }

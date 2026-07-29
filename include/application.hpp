@@ -1,17 +1,21 @@
 #pragma once
 
-#include <vector>
-#include <glm/glm.hpp>
-#include "window.hpp"
 #include "camera.hpp"
-#include "shader.hpp"
-#include "renderer.hpp"
-#include "input_manager.hpp"
-#include "grid.hpp"
-#include "text_renderer.hpp"
 #include "geometry.hpp"
-#include "texture.hpp"
 #include "glfw_context.hpp"
+#include "grid.hpp"
+#include "input_manager.hpp"
+#include "renderer.hpp"
+#include "shader.hpp"
+#include "startup_screen.hpp"
+#include "text_renderer.hpp"
+#include "texture.hpp"
+#include "ui_geometry.hpp"
+#include "window.hpp"
+
+#include <glm/glm.hpp>
+
+#include <vector>
 
 enum class AppState {
     Startup,
@@ -19,23 +23,31 @@ enum class AppState {
     Paused
 };
 
-struct ButtonSpec {
-    UIBox box;
-    float scale;
-    std::optional<Color> box_color;
-    std::optional<Color> label_color;
-    Texture* label_texture = nullptr;
-    std::string label;
-    UIAction action;
-    bool enabled = true;
-};
-
 class Application {
 public:
     Application();
+
+    // Core Behavior
     void run();
 
 private:
+    // Update/render per state
+    void update_running(float delta_time);
+    void render_running();
+
+    void update_paused();
+    void render_paused(); 
+    
+    void render_startup();
+    
+    // Shared drawing helpers
+    void clear_screen();
+    void draw_scene();
+    void draw_hud();
+    void draw_pause_overlay();
+    bool check_resize(int& last_fb_width, int& last_fb_height);  
+
+
     int window_width_ = 1920;
     int window_height_ = 1080;
     
@@ -53,34 +65,15 @@ private:
     TextRenderer display_text_renderer_;
     TextRenderer regular_text_renderer_;    
     InputManager input_manager_;
-    Pose last_camera_pose_{};
     glm::mat4 ui_projection_;
+    UIContext ui_ctx_;
+
+    // Screens
+    StartupScreen startup_screen_;
+
+    // App state
     AppState state_ = AppState::Startup;
+    Pose last_camera_pose_{};
     float last_frame_time_ = 0.0f;
-    bool display_info_ = false;
-    bool needs_redraw_ = true;
-    bool file_loaded_ = false;
-    bool simulation_btn_active_ = false;
-    bool use_file_data_ = true;
-    std::string loaded_file_path_;
-    std::string file_name_;
-    bool startup_finished_ = false;
-    
-    void draw_button(UIPage page, const ButtonSpec& spec);
-
-    void clear_screen();
-    void draw_scene();
-    void draw_hud();
-    void draw_pause_overlay();
-    void draw_startup_menu();
-    bool check_resize(int& last_fb_width, int& last_fb_height);
-
-    void update_startup();
-    void render_startup();
-
-    void update_running(float delta_time);
-    void render_running();
-
-    void update_paused();
-    void render_paused();
+    bool needs_redraw_ = true;    
 };

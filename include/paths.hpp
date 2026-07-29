@@ -1,5 +1,7 @@
 #pragma once
+
 #include <filesystem>
+#include <string>
 
 namespace paths {
     std::filesystem::path executable_dir();

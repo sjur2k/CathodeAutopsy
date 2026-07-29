@@ -54,13 +54,13 @@ T& operator/=(T& lhs, const auto rhs){
     return lhs;
 }
 template<MathStruct3D T>
-bool operator==(const T lhs, const T rhs){
+bool operator==(const T& lhs, const T& rhs){
     auto [a,b,c] = lhs;
     auto [d,e,f] = rhs;
     return a==d && b==e && c==f;
 }
 template<MathStruct3D T>
-bool operator!=(const T lhs, const T rhs){
+bool operator!=(const T& lhs, const T& rhs){
     return !(lhs==rhs);
 }
 
@@ -78,9 +78,6 @@ struct Position {
     Position(float x_, float y_, float z_)
         : x(x_), y(y_), z(z_) {}
 
-    Position operator+(const Position& other) const {
-        return Position{x + other.x, y + other.y, z + other.z};
-    }
     IntVector to_int() const{
         return {
             static_cast<int>(x),
@@ -99,9 +96,6 @@ struct Rotation {
     Rotation(float pitch_, float yaw_, float roll_)
         : pitch(pitch_), yaw(yaw_), roll(roll_) {}
 
-    Rotation operator+(const Rotation& other) const {
-        return Rotation{pitch + other.pitch, yaw + other.yaw, roll + other.roll};
-    }
     IntVector to_int() const{
         return {
             static_cast<int>(pitch),
@@ -120,7 +114,7 @@ struct Pose {
 
     Pose(const Position& position_, const Rotation& rotation_)
         : position(position_), rotation(rotation_) {}
-    
+
     Pose operator+(const Pose& other) const {
         return Pose{position + other.position, rotation + other.rotation};
     }
@@ -137,13 +131,12 @@ struct Pose {
         this->rotation -= other.rotation;
         return *this;
     }
-    // Defining a multiplication operator does not make sense here, 
+    // Defining a multiplication operator does not make sense here,
     // as the two structs are conceptually different and do not scale the same way
-    bool operator==(const Pose other){
+    bool operator==(const Pose& other) const {
         return this->position == other.position && this->rotation == other.rotation;
     }
-    bool operator!=(const Pose other){
+    bool operator!=(const Pose& other) const {
         return !(*this==other);
     }
 };
-

@@ -1,11 +1,10 @@
 #include "renderer.hpp"
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
-#include <stdexcept>
-#include <filesystem>
+#include "shader.hpp"
+
+#include <glad/glad.h>
 #include <glm/glm.hpp>
+
+#include <vector>
 
 Renderer::Renderer(const std::vector<glm::vec3>& vertices, GLenum draw_mode)
     : vertex_count_(vertices.size()), draw_mode_(draw_mode) {
@@ -45,6 +44,7 @@ Renderer::~Renderer() {
     glDeleteBuffers(1, &VBO_);
 }
 
+// Core behavior
 void Renderer::draw(
     Shader& shader, 
     const glm::mat4& projection, 
@@ -62,39 +62,7 @@ void Renderer::draw(
     glBindVertexArray(0);
 }
 
-std::vector<glm::vec3> Renderer::load_CSV(const std::string& path){
-    std::ifstream file(path);
-    if (!file.is_open()){
-        throw std::runtime_error("CSV file: " + path + " is open in another program.");
-    }
-    std::vector<glm::vec3> points;
-    std::string line;
-
-    while (std::getline(file, line)){
-        if (line.empty() || line[0] == '#') continue;
-        std::stringstream ss(line);
-        std::string x_str, y_str, z_str;
-        if (!std::getline(ss, x_str, ',')) continue;
-        if (!std::getline(ss, y_str, ',')) continue;
-        if (!std::getline(ss, z_str, ',')) continue;
-        if (x_str == "x" && y_str == "y" && z_str == "z") continue;
-        try{
-            float x = std::stof(x_str);
-            float y = std::stof(y_str);
-            float z = std::stof(z_str);
-            // To follow opengl convention, z and y are swapped
-            points.emplace_back(x, z, y);
-        } catch(const std::exception& e) {
-            continue; // Skip malformed rows. Uncomment under to see error
-            //std::cerr << e.what() << '\n';
-        }   
-    }
-    if (points.empty()){
-        throw std::runtime_error("No valid data found in: " + path);
-    }
-    return points;
-}
-
+// State mutators
 void Renderer::update_vertices(const std::vector<glm::vec3>& vertices){
     vertex_count_ = vertices.size();
     glBindBuffer(GL_ARRAY_BUFFER, VBO_);

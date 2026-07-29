@@ -1,9 +1,11 @@
 #pragma once
 
-#include <vector>
+#include "shader.hpp"
+
 #include <glad/glad.h>
 #include <glm/glm.hpp>
-#include "shader.hpp"
+
+#include <vector>
 
 struct TexturedVertex {
     glm::vec3 pos; 
@@ -25,6 +27,7 @@ class Renderer {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
+        // Core behavior
         void draw(
             Shader& shader, 
             const glm::mat4& projection, 
@@ -32,7 +35,7 @@ class Renderer {
             const glm::mat4& model
         );
 
-        std::vector<glm::vec3> load_CSV(const std::string& path);
+        // State mutators
         void update_vertices(const std::vector<glm::vec3>& vertices);
 
     private:

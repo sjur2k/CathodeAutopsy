@@ -1,10 +1,16 @@
 #pragma once
-#include <map>
-#include <string>
-#include <glad/glad.h>
-#include <glm/glm.hpp>
+
 #include "shader.hpp"
 #include "color.hpp"
+
+#include <glad/glad.h>
+#include <glm/glm.hpp>
+
+
+#include <map>
+#include <string>
+#include <tuple>
+#include <vector>
 
 class TextRenderer;
 
@@ -15,6 +21,7 @@ struct TextLine{
     Color color;
     TextRenderer* renderer = nullptr;
 
+    // Different constructors for different uses
     TextLine(std::string t, glm::vec2 xy, float s, Color c, TextRenderer* r = nullptr):
         text(t), x(xy.x), y(xy.y), scale(s), color(c), renderer(r){}
     TextLine(std::string t, float x, float y, float s, Color c, TextRenderer* r = nullptr):
@@ -45,9 +52,13 @@ class TextRenderer{
         );
         ~TextRenderer();
 
+        // Core behavior
         void render_text(TextLine& text);
+        
+        // Mutators
         void set_screen_size(int width, int height);
         
+        // Accessors
         std::tuple<float,float,float> measure_text(const std::string& text, float scale) const;
         std::tuple<float,float,float> measure_text(const TextLine& text) const;
         glm::vec2 center_text_in_box(
@@ -58,7 +69,7 @@ class TextRenderer{
         ) const;
 
     private:
-        struct Glyph{
+        struct Glyph{ // Noone else needs access to this
             unsigned int texture_id;
             glm::ivec2 size;
             glm::ivec2 bearing;

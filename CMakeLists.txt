@@ -2,10 +2,10 @@ cmake_minimum_required (VERSION 3.10)
 
 project (CathodeAutopsy)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(E57Format CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 include(FetchContent)
 FetchContent_Declare(
@@ -42,11 +42,13 @@ add_executable (CathodeAutopsy
     src/window.cpp
     src/input_manager.cpp
     src/application.cpp
-    src/mesh.cpp
     src/text_renderer.cpp
     src/stb_image/stb_image.cpp
     src/texture.cpp
     src/paths.cpp
+    src/point_cloud.cpp
+    src/ui_geometry.cpp
+    src/startup_screen.cpp
 )
 
 target_compile_options(CathodeAutopsy PRIVATE -Wall -Wextra -Wpedantic)
@@ -74,9 +76,13 @@ add_custom_command(TARGET CathodeAutopsy POST_BUILD
 target_include_directories(CathodeAutopsy PRIVATE include)
 target_include_directories(CathodeAutopsy SYSTEM PRIVATE
     lib/glfw-3.4.bin.WIN64/include
+    lib/libE57Format-3.3.0-mingw-w64/include
+    lib/xerces-c-3.2.3-mingw-w64/include
 )
 target_link_directories(CathodeAutopsy PRIVATE 
     lib/glfw-3.4.bin.WIN64/lib-mingw-w64
+    lib/libE57Format-3.3.0-mingw-w64/lib
+    lib/xerces-c-3.2.3-mingw-w64/lib
 )
 target_link_libraries(CathodeAutopsy PRIVATE
     glad
@@ -86,6 +92,7 @@ target_link_libraries(CathodeAutopsy PRIVATE
     freetype
     tinyfiledialogs
     E57Format
+    xerces-c
 )
 
 target_link_options(CathodeAutopsy PRIVATE -static-libgcc -static-libstdc++ -static)
