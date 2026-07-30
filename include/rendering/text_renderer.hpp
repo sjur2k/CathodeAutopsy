@@ -1,0 +1,83 @@
+#pragma once
+
+#include "rendering/shader.hpp"
+#include "color.hpp"
+
+#include <glad.h>
+#include <glm/glm.hpp>
+
+
+#include <map>
+#include <string>
+#include <tuple>
+#include <vector>
+
+class TextRenderer;
+
+struct TextLine{
+    std::string text;
+    float x,y;
+    float scale;
+    Color color;
+    TextRenderer* renderer = nullptr;
+
+    // Different constructors for different uses
+    TextLine(std::string t, glm::vec2 xy, float s, Color c, TextRenderer* r = nullptr):
+        text(t), x(xy.x), y(xy.y), scale(s), color(c), renderer(r){}
+    TextLine(std::string t, float x, float y, float s, Color c, TextRenderer* r = nullptr):
+        text(t), x(x), y(y), scale(s), color(c), renderer(r){}
+    TextLine(std::string t, float s, Color c, TextRenderer* r = nullptr):
+        text(t), scale(s), color(c), renderer(r){}
+};
+
+struct TextBlockLayout {
+    std::vector<TextLine> texts;
+    float box_x, box_y;
+    float box_width, box_height;
+};
+
+TextBlockLayout build_text_block(
+    const std::vector<TextLine>& lines,
+    float center_x, float center_y,
+    float line_spacing, float padding
+);
+
+class TextRenderer{
+    public:
+        TextRenderer(
+            const std::string& font_path, 
+            unsigned int pixel_height, 
+            int screen_width, 
+            int screen_height
+        );
+        ~TextRenderer();
+
+        // Core behavior
+        void render_text(TextLine& text);
+        
+        // Mutators
+        void set_screen_size(int width, int height);
+        
+        // Accessors
+        std::tuple<float,float,float> measure_text(const std::string& text, float scale) const;
+        std::tuple<float,float,float> measure_text(const TextLine& text) const;
+        glm::vec2 center_text_in_box(
+            const std::string& text,
+            float scale, 
+            float box_center_x, 
+            float box_center_y
+        ) const;
+
+    private:
+        struct Glyph{ // Noone else needs access to this
+            unsigned int texture_id;
+            glm::ivec2 size;
+            glm::ivec2 bearing;
+            unsigned int advance;
+        };
+        
+        std::map<char, Glyph> glyphs_;
+        unsigned int vao_ = 0, vbo_ = 0;
+        Shader shader_;
+        glm::mat4 projection_;
+};
