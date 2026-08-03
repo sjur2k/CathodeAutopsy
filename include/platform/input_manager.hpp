@@ -59,6 +59,8 @@ class InputManager {
         void set_mode(InputMode mode);
         void set_button_box(UIPage page, UIAction action, UIBox box);
         void remove_button_box(UIPage page, UIAction action);
+        void set_movement_speed(float speed){ movement_speed_multiplier_ = speed; }
+        void set_min_height(float min_height){ min_height_ = min_height;}
         
         // Actions
         std::optional<UIAction> consume_triggered_action();
@@ -96,4 +98,5 @@ class InputManager {
         bool first_mouse_ = true;
         float mouse_sensitivity_ = 0.1f;
         float movement_speed_multiplier_ = 50.0f;
+        float min_height_ = 1.0f;
 };

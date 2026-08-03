@@ -30,9 +30,9 @@ bool StartupScreen::update(){
     
     switch (*action){
     case UIAction::OpenFile: {
-        const char* filter[] = {"*.csv"};
+        const char* filter[] = {"*.csv", "*.e57"};
         const char* path = tinyfd_openFileDialog(
-            "Select a point cloud file","", 1, filter, "CSV files", 0
+            "Select a point cloud file","", 2, filter, "Point cloud files", 0
         );
         if (path){
             loaded_file_path_ = path;
@@ -122,7 +122,7 @@ void StartupScreen::draw(){
     float upload_x = window_width * 0.5f - upload_w * 0.5f;
     float upload_y = window_height * 0.35f;
     float upload_scale = 0.25f * ui_scale;
-    std::string upload_label = file_loaded_ ? file_name_ : "Select CSV file";
+    std::string upload_label = file_loaded_ ? file_name_ : "Select point cloud file";
 
     if (file_loaded_){
         float file_name_width = std::get<0>(
@@ -145,7 +145,7 @@ void StartupScreen::draw(){
         .box_color = std::nullopt,
         .label_color = std::nullopt,
         .label_texture = nullptr,
-        .label = file_loaded_ ? file_name_ : "Select CSV file",
+        .label = file_loaded_ ? file_name_ : "Select point cloud file",
         .action = UIAction::OpenFile,
         .enabled = !display_info_
     };

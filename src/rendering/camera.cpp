@@ -13,6 +13,24 @@
 // Helpers
 static std::string space(int num);
 
+// Mutating operations
+void Camera::frame_bounds(const Position& center, float radius){
+    float half_fov_rad = glm::radians(fov_ * 0.5f);
+    float distance = radius / std::sin(half_fov_rad);
+    
+    float yaw_rad = glm::radians(pose_.rotation.yaw);
+    float pitch_rad = glm::radians(pose_.rotation.pitch);
+    Position forward = Position(
+        std::cos(pitch_rad) * std::sin(yaw_rad),
+        std::sin(pitch_rad),
+        -std::cos(pitch_rad) * std::cos(yaw_rad)
+    );
+    
+    pose_.position = center - forward * distance;    
+    near_plane_ = std::max(0.01f, distance * 0.01f);
+    far_plane_ = distance + radius * 4.0f;
+}
+
 // Accessors
 glm::mat4 Camera::get_view_matrix() const {
     glm::mat4 view = glm::mat4(1.0f);

@@ -68,7 +68,7 @@ void InputManager::process_input(float delta_time) {
         current_pose.position += unit_up*velocity;
     }
     if (glfwGetKey(window_handle, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
-        if (current_pose.position.y > 1){
+        if (current_pose.position.y > min_height_){
             current_pose.position -= unit_up*velocity;
         }
     }

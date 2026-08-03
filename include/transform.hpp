@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 template<typename T>
 concept MathStruct3D = requires {
     typename T::is_3D_vector; // To ensure following templates only apply to the tagged structs.
@@ -77,6 +79,9 @@ struct Position {
 
     Position(float x_, float y_, float z_)
         : x(x_), y(y_), z(z_) {}
+    
+    Position(glm::vec3 v)
+        : x(v.x), y(v.y), z(v.z) {}
 
     IntVector to_int() const{
         return {
@@ -95,6 +100,9 @@ struct Rotation {
 
     Rotation(float pitch_, float yaw_, float roll_)
         : pitch(pitch_), yaw(yaw_), roll(roll_) {}
+
+    Rotation(glm::vec3 v)
+        : pitch(v.x), yaw(v.y), roll(v.z) {}
 
     IntVector to_int() const{
         return {

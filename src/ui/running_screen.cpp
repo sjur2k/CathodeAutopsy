@@ -6,30 +6,14 @@
 
 namespace {
     // Assumed constants (SI-units)
-    constexpr float kCellWidth = 10.0f;
-    constexpr float kCellLength = 4.0f;
+    constexpr float kCellWidth = 4.0f;
+    constexpr float kCellLength = 10.0f;
     constexpr float kResolution = 0.05f;
 
-    // Constants for rendering
+    // Constants for rendering example data
     constexpr float kGridWidth = kCellWidth / kResolution;
     constexpr float kGridLength = kCellLength / kResolution;
     constexpr float kPadding = 10.0f;
-
-    glm::mat4 build_floor_model(){
-        glm::mat4 model = glm::translate(
-            glm::mat4(1.0f),
-            glm::vec3(kGridLength/2.0f, 0.0f, kGridWidth/2.0f)
-        );
-        model = glm::rotate(
-            model,
-            glm::radians(-90.0f), glm::vec3(1.0f,0.0f,0.0f)
-        );
-        model = glm::scale(
-            model,
-            glm::vec3(kGridLength + 2*kPadding, kGridWidth + 2*kPadding, 1.0f)
-        );
-        return model;
-    }
 }
 
 RunningScreen::RunningScreen(
@@ -38,7 +22,10 @@ RunningScreen::RunningScreen(
     Renderer& point_cloud_renderer
 ) : ui_ctx_(ui_ctx),
     camera_(camera),
-    point_cloud_renderer_(point_cloud_renderer)
+    point_cloud_renderer_(point_cloud_renderer),
+    floor_center_(Position(kGridWidth/2.0f, 0.0f, kGridLength/2.0f)),
+    floor_half_width_(kGridWidth / 2.0f + kPadding),
+    floor_half_length_(kGridLength / 2.0f + kPadding)
 {}
 
 // Core behavior
@@ -93,4 +80,20 @@ void RunningScreen::draw(){
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
+}
+
+void RunningScreen::set_floor_extent(const Position& center, float half_width, float half_length){
+    floor_center_ = center;
+    floor_half_width_ = half_width;
+    floor_half_length_ = half_length;
+}
+
+glm::mat4 RunningScreen::build_floor_model() const {
+    glm::mat4 model = glm::translate(
+        glm::mat4(1.0f),
+        glm::vec3(floor_center_.x, floor_center_.y, floor_center_.z)
+    );
+    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(floor_half_width_ * 2.0f, floor_half_length_ * 2.0f, 1.0f));
+    return model;
 }

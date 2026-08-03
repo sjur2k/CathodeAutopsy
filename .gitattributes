@@ -3,3 +3,4 @@ include/KHR/khrplatform.h linguist-generated
 **/tinyfiledialogs/** linguist-generated
 **/glad/** linguist-generated
 **/stb_image/** linguist-generated
+*.e57 binary

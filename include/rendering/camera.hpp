@@ -19,6 +19,7 @@ class Camera {
         void set_pose(const Pose& new_pose) {pose_ = new_pose;}
         void reset_pose() {pose_ = initial_pose_;}
         void set_aspect_ratio(float aspect_ratio){aspect_ratio_ = aspect_ratio;}
+        void frame_bounds(const Position& center, float radius);
 
         // Accessors
         Pose get_pose() const {return pose_;}

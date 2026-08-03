@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(glm CONFIG REQUIRED)
+
 include(FetchContent)
 FetchContent_Declare(
     freetype
@@ -101,4 +102,6 @@ target_link_libraries(CathodeAutopsy PRIVATE
     xerces-c
 )
 
-target_link_options(CathodeAutopsy PRIVATE -static-libgcc -static-libstdc++ -static)
+target_link_options(CathodeAutopsy PRIVATE 
+    -static-libgcc -static-libstdc++ -static
+)

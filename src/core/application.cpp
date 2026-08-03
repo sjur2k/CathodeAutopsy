@@ -104,8 +104,25 @@ void Application::run() {
 
                 if (startup_screen_.finished()){
                     if(startup_screen_.should_load_point_cloud()){
-                        point_cloud_renderer_.update_vertices(
-                            PointCloud::load_CSV(startup_screen_.file_path()).points()
+                        PointCloud cloud;
+                        cloud.load(startup_screen_.file_path());
+                        point_cloud_renderer_.update_vertices(cloud.points());
+                        
+                        auto bounds = cloud.compute_bounds();
+                        camera_.frame_bounds(bounds.center, bounds.radius);
+                        input_manager_.set_movement_speed(bounds.radius * 0.5f);
+
+                        Position floor_pos(
+                            bounds.center.x, 
+                            bounds.min_y - 0.1f * abs(bounds.min_y), 
+                            bounds.center.z
+                        );
+                        input_manager_.set_min_height(floor_pos.y + bounds.radius * 0.1f);
+                        
+                        running_screen_.set_floor_extent(
+                            floor_pos,
+                            bounds.half_extent_x,
+                            bounds.half_extent_z
                         );
                     }
                     state_ = AppState::Running;
