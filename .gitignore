@@ -7,3 +7,5 @@ media/*
 !media/.gitkeep
 .vscode
 TODO.txt
+external/source/xerces-c
+external/source/libE57Format
