@@ -2,8 +2,8 @@
 #include "core/paths.hpp"
 
 #include <glm/glm.hpp>
-#include <E57Format/E57SimpleData.h>
-#include <E57Format/E57SimpleReader.h>
+#include <E57SimpleData.h>
+#include <E57SimpleReader.h>
 #include <filesystem>
 
 #include <fstream>
@@ -18,6 +18,7 @@
 namespace {
     constexpr int64_t kChunkSize = 65536;
 }
+
 
 void PointCloud::load(const std::string& path){
     std::string ext = std::filesystem::path(path).extension().string();

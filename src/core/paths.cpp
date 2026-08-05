@@ -1,6 +1,8 @@
 #include "core/paths.hpp"
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 
 #include <filesystem>

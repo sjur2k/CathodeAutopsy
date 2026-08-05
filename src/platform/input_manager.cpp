@@ -232,9 +232,6 @@ void InputManager::key_callback(GLFWwindow* window, int key, int scancode, int a
 
     switch(key)
     {
-    case GLFW_KEY_T:
-        input_manager->camera_.print_pose();
-        break;
     case GLFW_KEY_Q:
         glfwSetWindowShouldClose(window, true);
         break;
