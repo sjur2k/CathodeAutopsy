@@ -76,9 +76,12 @@ src/
 ├── platform/      Windowing (GLFW wrapper) and input handling
 ├── rendering/     Camera, shaders, renderer, text rendering, textures
 └── ui/            Startup/pause/running screens and shared UI geometry helpers
- 
+
+include/           
+└── ...            Headers for src/
+
 external/
-└── source/        Vendored single-file / small dependencies (glad, stb_image, tinyfiledialogs)
+└── source/        Vendored single-file / small dependencies
 ```
 
 ## Known limitations
