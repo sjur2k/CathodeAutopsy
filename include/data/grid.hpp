@@ -1,5 +1,8 @@
 #pragma once
+
 #include "transform.hpp"
+#include "data/axis_convention.hpp"
+
 #include <glm/glm.hpp>
 #include <vector>
 
@@ -19,7 +22,8 @@ class Grid{
         // Mutating operations
         void fill_random_smooth();
         std::vector<glm::vec3> generate_random_point_cloud();
-        
+        void set_axis_conv(AxisConvention conv){axis_conv_ = conv;}
+
         // Accessors
         Dimensions get_dimensions() const;
         float get_value(int i, int j) const;
@@ -33,4 +37,5 @@ class Grid{
         int rows_, cols_;
         Pose relative_origin_;
         std::vector<float> grid_serialized_;
+        AxisConvention axis_conv_ = AxisConvention::XYZ;
 };

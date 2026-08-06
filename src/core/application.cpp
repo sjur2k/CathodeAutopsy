@@ -3,6 +3,7 @@
 #include "data/point_cloud.hpp"
 #include "core/scene_config.hpp"
 #include "data/primitives.hpp"
+#include "data/axis_convention.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -10,6 +11,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <iostream>
 
 Application::Application() : 
     glfw_context_(),
@@ -87,114 +89,119 @@ void Application::run() {
     glfwGetFramebufferSize(window_.get_handle(), &last_fb_width, &last_fb_height);
     last_camera_pose_ = camera_.get_pose();
 
-    while (!window_.should_close()) {
-        switch(state_){
-            case AppState::Startup: {
-                if (!needs_redraw_){
-                    glfwWaitEvents();
-                }
-
-                needs_redraw_ |= startup_screen_.update();
-
-                if (needs_redraw_){
-                    render_startup();
-                    window_.swap_buffers();
-                    needs_redraw_ = false;
-                }
-
-                if (startup_screen_.finished()){
-                    if(startup_screen_.should_load_point_cloud()){
-                        PointCloud cloud;
-                        cloud.load(startup_screen_.file_path());
-                        point_cloud_renderer_.update_vertices(cloud.points());
-                        
-                        auto bounds = cloud.compute_bounds();
-                        camera_.frame_bounds(bounds.center, bounds.radius);
-                        input_manager_.set_movement_speed(bounds.radius * 0.5f);
-
-                        Position floor_pos(
-                            bounds.center.x, 
-                            bounds.min_y - 0.1f * abs(bounds.min_y), 
-                            bounds.center.z
-                        );
-                        input_manager_.set_min_height(floor_pos.y + bounds.radius * 0.1f);
-                        
-                        running_screen_.set_floor_extent(
-                            floor_pos,
-                            bounds.half_extent_x,
-                            bounds.half_extent_z
-                        );
-                    }
-                    state_ = AppState::Running;
-                    input_manager_.set_active_page(UIPage::None);
-                    input_manager_.set_mode(InputMode::Locked);
-                    last_frame_time_ = static_cast<float>(glfwGetTime());
-                    needs_redraw_ = true;
-                }
-                break;
-            }
-            case AppState::Running: {
-                if (input_manager_.has_active_input()){ // Prevents busy idling
-                    glfwPollEvents();
-                } else {
-                    glfwWaitEvents();
-                    last_frame_time_ = static_cast<float>(glfwGetTime());
-                }
-
-                if (input_manager_.is_paused()){
-                    state_ = AppState::Paused;
-                    input_manager_.set_active_page(UIPage::PauseMenu);
-                    input_manager_.set_mode(InputMode::Interactive);
-                    needs_redraw_ = true;
-                    break;
-                }
-                
-                needs_redraw_ |= check_resize(last_fb_width, last_fb_height);
-
-                float current_time = static_cast<float>(glfwGetTime());
-                float delta_time = current_time - last_frame_time_;
-                last_frame_time_ = current_time;
-
-                running_screen_.update(delta_time);
-
-                Pose current_pose = camera_.get_pose();
-                if (current_pose != last_camera_pose_){
-                    needs_redraw_ = true,
-                    last_camera_pose_ = current_pose;
-                }
-                
-                if(needs_redraw_){ // Assumes constant grid, no moving objects etc..
-                    render_running();
-                    window_.swap_buffers();
-                    needs_redraw_ = false;
-                }
-                break;
-            } 
-            case AppState::Paused: {
-                glfwWaitEvents();
-
-                needs_redraw_ |= pause_screen_.update();
-
-                if (pause_screen_.should_exit()){
-                    input_manager_.set_paused(false);
-                    state_ = AppState::Startup;
-                    input_manager_.set_active_page(UIPage::StartMenu);
-                    last_frame_time_ = static_cast<float>(glfwGetTime());
-                    needs_redraw_ = true;
-                    break;
-                }
-
-                needs_redraw_ |= check_resize(last_fb_width, last_fb_height);
-
-                if (needs_redraw_){
-                    render_paused();
-                    window_.swap_buffers();
-                    needs_redraw_ = false;
-                }
-                break;
-            }
+    while (!window_.should_close()) 
+    {
+    switch(state_){
+    case AppState::Startup: {
+        if (!needs_redraw_){
+            glfwWaitEvents();
         }
+
+        needs_redraw_ |= startup_screen_.update();
+
+        if (needs_redraw_){
+            render_startup();
+            window_.swap_buffers();
+            needs_redraw_ = false;
+        }
+
+        if (startup_screen_.finished()){
+            AxisConvention conv = input_manager_.get_axis_conv();
+            if(startup_screen_.should_load_point_cloud()){
+                PointCloud cloud;
+                cloud.set_axis_convention(conv);
+                cloud.load(startup_screen_.file_path());
+                point_cloud_renderer_.update_vertices(cloud.points());
+                auto bounds = cloud.compute_bounds();
+                camera_.frame_bounds(bounds.center, bounds.radius);
+                input_manager_.set_movement_speed(bounds.radius * 0.5f);
+
+                Position floor_pos(
+                    bounds.center.x, 
+                    bounds.min_y - 0.1f * abs(bounds.min_y), 
+                    bounds.center.z
+                );
+                input_manager_.set_min_height(floor_pos.y + bounds.radius * 0.1f);
+                
+                running_screen_.set_floor_extent(
+                    floor_pos,
+                    bounds.half_extent_x,
+                    bounds.half_extent_z
+                );
+            } else {
+                grid_.set_axis_conv(conv);
+                point_cloud_renderer_.update_vertices(grid_.generate_random_point_cloud());
+            }
+            state_ = AppState::Running;
+            input_manager_.set_active_page(UIPage::None);
+            input_manager_.set_mode(InputMode::Locked);
+            last_frame_time_ = static_cast<float>(glfwGetTime());
+            needs_redraw_ = true;
+        }
+        break;
     }
+    case AppState::Running: {
+        if (input_manager_.has_active_input()){ // Prevents busy idling
+            glfwPollEvents();
+        } else {
+            glfwWaitEvents();
+            last_frame_time_ = static_cast<float>(glfwGetTime());
+        }
+
+        if (input_manager_.is_paused()){
+            state_ = AppState::Paused;
+            input_manager_.set_active_page(UIPage::PauseMenu);
+            input_manager_.set_mode(InputMode::Interactive);
+            needs_redraw_ = true;
+            break;
+        }
+        
+        needs_redraw_ |= check_resize(last_fb_width, last_fb_height);
+
+        float current_time = static_cast<float>(glfwGetTime());
+        float delta_time = current_time - last_frame_time_;
+        last_frame_time_ = current_time;
+
+        running_screen_.update(delta_time);
+
+        Pose current_pose = camera_.get_pose();
+        if (current_pose != last_camera_pose_){
+            needs_redraw_ = true,
+            last_camera_pose_ = current_pose;
+        }
+        
+        if(needs_redraw_){ // Assumes constant grid, no moving objects etc..
+            render_running();
+            window_.swap_buffers();
+            needs_redraw_ = false;
+        }
+        break;
+    } 
+    case AppState::Paused: {
+        glfwWaitEvents();
+
+        needs_redraw_ |= pause_screen_.update();
+
+        if (pause_screen_.should_exit()){
+            input_manager_.set_paused(false);
+            state_ = AppState::Startup;
+            input_manager_.set_active_page(UIPage::StartMenu);
+            last_frame_time_ = static_cast<float>(glfwGetTime());
+            needs_redraw_ = true;
+            break;
+        }
+
+        needs_redraw_ |= check_resize(last_fb_width, last_fb_height);
+
+        if (needs_redraw_){
+            render_paused();
+            window_.swap_buffers();
+            needs_redraw_ = false;
+        }
+        break;
+    }
+    }
+}
 }
 
 // Rendering helpers

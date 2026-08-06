@@ -1,6 +1,8 @@
 #pragma once
 
 #include "glfw_context.hpp"
+#include "data/point_cloud.hpp"
+#include "data/axis_convention.hpp"
 
 #include <glad.h>
 #include <GLFW/glfw3.h>
@@ -37,6 +39,7 @@ enum class UIAction {
     HideInfo,
     ToggleUseFileData,
     GoToMainMenu,
+    SwapAxisConv,
     // Add more actions if needed.
 };
 
@@ -52,7 +55,8 @@ class InputManager {
         bool is_paused() const {return paused_;}
         bool has_active_input() const;
         UIPage get_active_page() const {return active_page_;}
-        
+        AxisConvention get_axis_conv() {return axis_conv_;}
+
         // State mutators
         void set_paused(bool value) {paused_ = value;}
         void set_active_page(UIPage page) {active_page_ = page;}
@@ -61,7 +65,8 @@ class InputManager {
         void remove_button_box(UIPage page, UIAction action);
         void set_movement_speed(float speed){ movement_speed_multiplier_ = speed; }
         void set_min_height(float min_height){ min_height_ = min_height;}
-        
+        void set_axis_conv(AxisConvention conv) {axis_conv_ = conv;}
+    
         // Actions
         std::optional<UIAction> consume_triggered_action();
 
@@ -85,6 +90,9 @@ class InputManager {
         std::unordered_map<UIPage, std::unordered_map<UIAction, UIBox>> page_buttons_;
         std::optional<UIAction> triggered_action_;
         bool paused_ = false;
+        
+        // Relayed states
+        AxisConvention axis_conv_ = AxisConvention::XYZ;
 
         // Cursor state
         GLFWcursor* arrow_cursor_ = nullptr;

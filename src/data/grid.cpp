@@ -1,4 +1,5 @@
 #include "data/grid.hpp"
+#include "data/axis_convention.hpp"
 #include "core/paths.hpp"
 #include "transform.hpp"
 
@@ -51,7 +52,11 @@ std::vector<glm::vec3> Grid::get_point_cloud_vec3() const{
             float x = i + relative_origin_.position.x;
             float y = get_value(i, j) + relative_origin_.position.y;
             float z = j + relative_origin_.position.z;
-            point_cloud.emplace_back(x, y, z);
+            if (axis_conv_ == AxisConvention::XYZ){
+                point_cloud.emplace_back(x, y, z);    
+            } else if (axis_conv_ == AxisConvention::XZY){
+                point_cloud.emplace_back(x, z, y); 
+            }
         }
     }
     return point_cloud;

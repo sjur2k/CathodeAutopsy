@@ -1,4 +1,5 @@
 #include "data/point_cloud.hpp"
+#include "data/axis_convention.hpp"
 #include "core/paths.hpp"
 
 #include <glm/glm.hpp>
@@ -56,10 +57,10 @@ void PointCloud::load_CSV(const std::string& path){
             float y = std::stof(y_str);
             float z = std::stof(z_str);
 
-            if(yz_swap_){
-                points_.emplace_back(x, z, y);
-            } else {
-                points_.emplace_back(x, y, z); // OpenGL convention
+            if (axis_conv_==AxisConvention::XYZ) {
+                points_.emplace_back(x, y, z);
+            } else if (axis_conv_ == AxisConvention::XZY) {
+                points_.emplace_back(x, z, y); // OpenGL convention
             }
             
         } catch(const std::exception& e) {
@@ -117,10 +118,10 @@ void PointCloud::load_E57(const std::string& path){
                     float x = static_cast<float>(x_buf[i]);
                     float y = static_cast<float>(y_buf[i]);
                     float z = static_cast<float>(z_buf[i]); 
-                    if (yz_swap_){
-                        points_.emplace_back(x,z,y);
-                    } else {
-                        points_.emplace_back(x,y,z); // OpenGL standard
+                    if (axis_conv_ == AxisConvention::XYZ) {
+                        points_.emplace_back(x,y,z);
+                    } else if (axis_conv_ == AxisConvention::XZY) {
+                        points_.emplace_back(x,z,y); // OpenGL standard
                     }
                 }
             }

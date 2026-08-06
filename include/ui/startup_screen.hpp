@@ -20,7 +20,7 @@ class StartupScreen{
 
         // Accessors
         bool finished();
-        bool should_load_point_cloud() const { return file_loaded_ && use_file_data_; }
+        bool should_load_point_cloud();
         const std::string& file_path() const { return loaded_file_path_; }
 
     private:
@@ -30,6 +30,7 @@ class StartupScreen{
 
         bool display_info_ = false;
         bool file_loaded_ = false;
+        bool new_file_ = false;
         bool use_file_data_ = true;
         bool startup_finished_ = false;
         std::string loaded_file_path_;

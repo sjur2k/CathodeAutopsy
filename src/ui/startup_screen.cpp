@@ -1,4 +1,5 @@
 #include "ui/startup_screen.hpp"
+#include "data/axis_convention.hpp"
 #include "core/paths.hpp"
 
 #include "tinyfiledialogs.h"
@@ -37,6 +38,7 @@ bool StartupScreen::update(){
         if (path){
             loaded_file_path_ = path;
             file_name_ = paths::extract_name(loaded_file_path_);
+            if (file_loaded_) new_file_ = true;
             file_loaded_ = true;
         }
         return true;
@@ -57,6 +59,18 @@ bool StartupScreen::update(){
         use_file_data_ = !use_file_data_;
         return true;
 
+    case UIAction::SwapAxisConv:
+        // This is a bit clunky, but there might be other conventions added later.
+        {
+        AxisConvention conv = ui_ctx_.input_manager.get_axis_conv();
+        if (conv == AxisConvention::XYZ){
+            conv = AxisConvention::XZY;
+        } else {
+            conv = AxisConvention::XYZ;
+        }
+        ui_ctx_.input_manager.set_axis_conv(conv);
+        return true;
+        }
     default:
         return false;
     }
@@ -120,7 +134,7 @@ void StartupScreen::draw(){
     float upload_w = 400.0f * x_scale;
     float upload_h = 70.0f * y_scale;
     float upload_x = window_width * 0.5f - upload_w * 0.5f;
-    float upload_y = window_height * 0.35f;
+    float upload_y = window_height * 0.40f;
     float upload_scale = 0.25f * ui_scale;
     std::string upload_label = file_loaded_ ? file_name_ : "Select point cloud file";
 
@@ -208,12 +222,68 @@ void StartupScreen::draw(){
     };
     draw_button(ui_ctx_, UIPage::StartMenu, sim_type_btn_2);
     
+    // Checkbox2 text (no button functionality)
+    ButtonSpec swap_yz_btn_1{
+        .box = UIBox{
+            .x = window_width * 0.5f - button_w * 0.5f,
+            .y = upload_y - 3.0f*(button_h + 20.0f),
+            .width = button_w,
+            .height = button_h
+        },
+        .scale = 0.25f * ui_scale,
+        .box_color = std::nullopt,
+        .label_color = std::nullopt,
+        .label_texture = nullptr,
+        .label = "Use OpenGL axes convention:",
+        .action = UIAction::SwapAxisConv,
+        .enabled = !display_info_ // just to get the same color
+    };
+    draw_button(ui_ctx_, UIPage::StartMenu, swap_yz_btn_1);
+
+    // Checkbox2 (swap yz or not)
+    AxisConvention conv = ui_ctx_.input_manager.get_axis_conv();
+    ButtonSpec swap_yz_btn_2{
+        .box = UIBox{
+            .x = window_width * 0.5f + button_w * 0.5f + 10.0f,
+            .y = upload_y - 3.0f*(button_h + 20.0f),
+            .width = button_h,
+            .height = button_h
+        },
+        .scale = 0.4f * ui_scale,
+        .box_color = std::nullopt,
+        .label_color = Colors::Background,
+        .label_texture = nullptr,
+        .label = conv == AxisConvention::XYZ ? "" : "X",
+        .action = UIAction::SwapAxisConv,
+        .enabled = !display_info_
+    };
+    draw_button(ui_ctx_, UIPage::StartMenu, swap_yz_btn_2);
+
+    // Example-data axis warning   
+    if (!use_file_data_ && conv == AxisConvention::XZY){
+        TextLine line1("Example data does not use", 0.25f * ui_scale, Colors::Yellow, &reg_text_renderer);
+        TextLine line2("the OpenGL convention", 0.25f * ui_scale, Colors::Yellow, &reg_text_renderer);
+        float warning_text_width = std::max(
+            std::get<0>(reg_text_renderer.measure_text(line1)), 
+            std::get<0>(reg_text_renderer.measure_text(line2))
+        );
+        TextBlockLayout warning_text_block = build_text_block(
+            std::vector<TextLine>{line1, line2},
+            window_width * 0.5f + button_w * 0.5f + button_h + 20.0f + 0.5f * warning_text_width,
+            upload_y - 3.0f*(button_h + 20.0f) + 0.5f * button_h,
+            10.0f, 10.0f
+        );
+        for (auto& text : warning_text_block.texts){
+            reg_text_renderer.render_text(text);
+        }
+    }
+    
     // Info tab button
     button_w = 200.0f * x_scale;
     ButtonSpec info_btn_spec{
         .box = UIBox{
             .x = window_width * 0.5f - button_w * 0.5f,
-            .y = upload_y - 3.0f * (button_h + 20.0f),
+            .y = upload_y - 4.0f * (button_h + 20.0f),
             .width = button_w,
             .height = button_h
         },
@@ -289,6 +359,14 @@ void StartupScreen::draw(){
 bool StartupScreen::finished(){
     if (startup_finished_){
         startup_finished_ = false;
+        return true;
+    }
+    return false;
+}
+
+bool StartupScreen::should_load_point_cloud() {
+    if ((file_loaded_ || new_file_) && use_file_data_){
+        new_file_ = false;
         return true;
     }
     return false;
